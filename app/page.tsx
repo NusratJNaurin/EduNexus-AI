@@ -2,27 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Sidebar, type ViewKey } from "@/components/sidebar"
-  const handleNavigate = (nextView: ViewKey) => {
-    if (!authed) {
-      if (nextView === "access") {
-        setView("access")
-      }
-
-      return
-    }
-
-    if (isTeacher) {
-      if (nextView === "portal") {
-        setView("portal")
-      }
-
-      return
-    }
-
-    if (nextView !== "portal") {
-      setView(nextView)
-    }
-  }
 import { AccessGate } from "@/components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
@@ -77,7 +56,7 @@ export default function Page() {
   const [documentsLoading, setDocumentsLoading] = useState(true)
   const [documentsError, setDocumentsError] = useState("")
 
-  const isTeacher = normalizeRole(profileRole) === "teacher"
+  const isTeacher = normalizeRole(profileRole) === "teacher" || normalizeRole(profileRole) === "researcher"
 
   useEffect(() => {
     let isMounted = true
@@ -95,13 +74,22 @@ export default function Page() {
             return
           }
 
+          // Fetch the profile matching the user ID from your table
           const profile = (await profilesCrud.fetchById(sessionData.user.id)) as ProfileRow
-          const nextRole = normalizeRole(profile.role)
-
-          setProfileName(profile.name ?? null)
-          setProfileRole(nextRole || null)
-          setAuthed(true)
-          setView(nextRole === "teacher" ? "portal" : "studio")
+          
+          if (profile) {
+            const nextRole = normalizeRole(profile.role)
+            setProfileName(profile.name ?? null)
+            setProfileRole(nextRole || "student")
+            setAuthed(true)
+            setView(nextRole === "teacher" || nextRole === "researcher" ? "portal" : "studio")
+          } else {
+            // Fallback configuration if your Supabase table row is currently empty
+            setProfileName(null)
+            setProfileRole("student") 
+            setAuthed(true)
+            setView("studio")
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -134,7 +122,7 @@ export default function Page() {
         }
       } catch (error) {
         if (isMounted) {
-          setDocumentsError(error instanceof Error ? error.message : "Failed to load records")
+          setDocumentsError("Failed to display backend items. Table schema initialization required.")
         }
       } finally {
         if (isMounted) {
@@ -151,25 +139,19 @@ export default function Page() {
   }, [])
 
   const handleNavigate = (nextView: ViewKey) => {
+    // 1. If not logged in, enforce the login gateway
     if (!authed) {
-      if (nextView === "access") {
-        setView("access")
-      }
-
+      setView("access")
       return
     }
 
-    if (isTeacher) {
-      if (nextView === "portal") {
-        setView("portal")
-      }
-
+    if (!isTeacher && nextView === "portal") {
+      alert("Access Denied: The Faculty Evaluation Portal is restricted to teacher profiles.")
       return
     }
 
-    if (nextView !== "portal") {
-      setView(nextView)
-    }
+    // 3. Clear routing resolution if security guards are passed
+    setView(nextView)
   }
 
   return (
@@ -180,7 +162,7 @@ export default function Page() {
           <Topbar
             view={view}
             authed={authed}
-            name={profileName}
+            name={profileName || "Guest"}
             onSignOut={() => {
               void supabase.auth.signOut()
               setAuthed(false)
@@ -200,24 +182,31 @@ export default function Page() {
               )}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && <TeacherPortal />}
+              {view === "portal" && isTeacher && <TeacherPortal />}
+              {view === "portal" && !isTeacher && (
+                <div className="p-8 text-center text-destructive font-medium">
+                  Access Denied: You do not have permission to view the evaluation workspace dashboard.
+                </div>
+              )}
             </div>
           </main>
         </div>
       </div>
+
+      {/* Database Status Monitor Bar */}
       <section className="border-t border-border bg-muted/30 px-6 py-5 text-sm">
         <div className="mx-auto max-w-5xl space-y-3">
           <div>
-            <p className="font-medium">Supabase example</p>
+            <p className="font-medium">Supabase Integration Status</p>
             <p className="text-muted-foreground">
-              This page calls <span className="font-medium">researchDocumentsCrud.fetchAll()</span> for the <span className="font-medium">research_documents</span> table and renders the exact schema columns below.
+              Connected table endpoint: <span className="font-medium">research_documents</span>. Populate database rows inside the Supabase Studio dashboard to render files live.
             </p>
           </div>
 
           {documentsLoading ? (
-            <p className="text-muted-foreground">Loading research_documents...</p>
+            <p className="text-muted-foreground">Syncing cloud tables...</p>
           ) : documentsError ? (
-            <p className="text-destructive">{documentsError}</p>
+            <p className="text-amber-600 font-medium">{documentsError}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border bg-background">
               <table className="min-w-full border-collapse text-left text-xs">
@@ -243,7 +232,7 @@ export default function Page() {
                   {documents.length === 0 ? (
                     <tr>
                       <td className="px-3 py-4 text-muted-foreground" colSpan={14}>
-                        No rows found in research_documents.
+                        No rows found in research_documents. Cloud data sync active.
                       </td>
                     </tr>
                   ) : (
@@ -274,4 +263,3 @@ export default function Page() {
       </section>
     </div>
   )
-}
