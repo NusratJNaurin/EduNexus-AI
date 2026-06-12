@@ -29,11 +29,17 @@ export function Sidebar({
   active,
   onNavigate,
   authed,
+  canAccessPortal,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   authed: boolean
+  canAccessPortal: boolean
 }) {
+  const visibleNav = authed
+    ? NAV.filter((item) => (canAccessPortal ? item.key === "portal" : item.key !== "portal"))
+    : NAV.filter((item) => item.key === "access")
+
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
@@ -50,7 +56,7 @@ export function Sidebar({
         <p className="px-3 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
           Workspace
         </p>
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon
           const locked = item.requiresAuth && !authed
           const isActive = active === item.key

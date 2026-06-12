@@ -2,12 +2,34 @@
 
 import { useEffect, useState } from "react"
 import { Sidebar, type ViewKey } from "@/components/sidebar"
+  const handleNavigate = (nextView: ViewKey) => {
+    if (!authed) {
+      if (nextView === "access") {
+        setView("access")
+      }
+
+      return
+    }
+
+    if (isTeacher) {
+      if (nextView === "portal") {
+        setView("portal")
+      }
+
+      return
+    }
+
+    if (nextView !== "portal") {
+      setView(nextView)
+    }
+  }
 import { AccessGate } from "@/components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
 import { TeacherPortal } from "@/components/teacher-portal"
 import { Topbar } from "@/components/topbar"
-import { researchDocumentsCrud } from "@/lib/crud"
+import { profilesCrud, researchDocumentsCrud } from "@/lib/crud"
+import { supabase } from "@/lib/supabase"
 
 type ResearchDocumentRow = {
   id: string
@@ -26,6 +48,13 @@ type ResearchDocumentRow = {
   updated_at: string
 }
 
+type ProfileRow = {
+  name: string | null
+  role: string | null
+}
+
+const normalizeRole = (role: string | null | undefined) => role?.trim().toLowerCase() ?? ""
+
 const formatValue = (value: unknown) => {
   if (Array.isArray(value)) {
     return value.length > 0 ? value.join(", ") : "—"
@@ -41,9 +70,55 @@ const formatValue = (value: unknown) => {
 export default function Page() {
   const [view, setView] = useState<ViewKey>("access")
   const [authed, setAuthed] = useState(false)
+  const [profileName, setProfileName] = useState<string | null>(null)
+  const [profileRole, setProfileRole] = useState<string | null>(null)
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0)
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(true)
   const [documentsError, setDocumentsError] = useState("")
+
+  const isTeacher = normalizeRole(profileRole) === "teacher"
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadProfile = async () => {
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getUser()
+
+        if (isMounted) {
+          if (sessionError || !sessionData.user) {
+            setAuthed(false)
+            setProfileName(null)
+            setProfileRole(null)
+            setView("access")
+            return
+          }
+
+          const profile = (await profilesCrud.fetchById(sessionData.user.id)) as ProfileRow
+          const nextRole = normalizeRole(profile.role)
+
+          setProfileName(profile.name ?? null)
+          setProfileRole(nextRole || null)
+          setAuthed(true)
+          setView(nextRole === "teacher" ? "portal" : "studio")
+        }
+      } catch (error) {
+        if (isMounted) {
+          setAuthed(false)
+          setProfileName(null)
+          setProfileRole(null)
+          setView("access")
+        }
+      }
+    }
+
+    void loadProfile()
+
+    return () => {
+      isMounted = false
+    }
+  }, [profileRefreshKey])
 
   useEffect(() => {
     let isMounted = true
@@ -68,26 +143,58 @@ export default function Page() {
       }
     }
 
-    loadDocuments()
+    void loadDocuments()
 
     return () => {
       isMounted = false
     }
   }, [])
 
+  const handleNavigate = (nextView: ViewKey) => {
+    if (!authed) {
+      if (nextView === "access") {
+        setView("access")
+      }
+
+      return
+    }
+
+    if (isTeacher) {
+      if (nextView === "portal") {
+        setView("portal")
+      }
+
+      return
+    }
+
+    if (nextView !== "portal") {
+      setView(nextView)
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
-        <Sidebar active={view} onNavigate={setView} authed={authed} />
+        <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar view={view} authed={authed} onSignOut={() => { setAuthed(false); setView("access") }} />
+          <Topbar
+            view={view}
+            authed={authed}
+            name={profileName}
+            onSignOut={() => {
+              void supabase.auth.signOut()
+              setAuthed(false)
+              setProfileName(null)
+              setProfileRole(null)
+              setView("access")
+            }}
+          />
           <main className="min-w-0 flex-1 overflow-x-hidden">
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {view === "access" && (
                 <AccessGate
                   onAuthed={() => {
-                    setAuthed(true)
-                    setView("studio")
+                    setProfileRefreshKey((current) => current + 1)
                   }}
                 />
               )}

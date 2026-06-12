@@ -14,10 +14,12 @@ const TITLES: Record<ViewKey, { title: string; crumb: string }> = {
 export function Topbar({
   view,
   authed,
+  name,
   onSignOut,
 }: {
   view: ViewKey
   authed: boolean
+  name: string | null
   onSignOut: () => void
 }) {
   const { title, crumb } = TITLES[view]
@@ -26,6 +28,7 @@ export function Topbar({
       <div className="min-w-0">
         <p className="text-xs font-medium text-muted-foreground">{crumb}</p>
         <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">{title}</h1>
+        {name && <p className="truncate text-xs text-muted-foreground">Signed in as {name}</p>}
       </div>
       <div className="flex items-center gap-2">
         <div className="hidden items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground lg:flex">
