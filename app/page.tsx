@@ -7,8 +7,9 @@ import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
 import { TeacherPortal } from "@/components/teacher-portal"
 import { Topbar } from "@/components/topbar"
-import { profilesCrud, researchDocumentsCrud } from "@/lib/crud"
-import { supabase } from "@/lib/supabase"
+import { researchDocumentsCrud } from "@/lib/crud" // Ensure storage exports are available here if imported
+
+const supabase = (researchDocumentsCrud as { supabase?: any }).supabase
 
 type ResearchDocumentRow = {
   id: string
@@ -28,7 +29,9 @@ type ResearchDocumentRow = {
 }
 
 type ProfileRow = {
-  name: string | null
+  id: string
+  full_name: string | null
+  qu_email: string
   role: string | null
 }
 
@@ -38,11 +41,9 @@ const formatValue = (value: unknown) => {
   if (Array.isArray(value)) {
     return value.length > 0 ? value.join(", ") : "—"
   }
-
   if (value === null || value === undefined || value === "") {
     return "—"
   }
-
   return String(value)
 }
 
@@ -53,11 +54,12 @@ export default function Page() {
   const [profileRole, setProfileRole] = useState<string | null>(null)
   const [profileRefreshKey, setProfileRefreshKey] = useState(0)
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
-  const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documentsError, setDocumentsError] = useState("")
 
-  const isTeacher = normalizeRole(profileRole) === "teacher" || normalizeRole(profileRole) === "researcher"
+  const isTeacher = normalizeRole(profileRole) === "faculty" || normalizeRole(profileRole) === "researcher"
 
+  // Monitor Authentication Session Status and Row Profiles
   useEffect(() => {
     let isMounted = true
 
@@ -74,22 +76,31 @@ export default function Page() {
             return
           }
 
-          // Fetch the profile matching the user ID from your table
-          const profile = (await profilesCrud.fetchById(sessionData.user.id)) as ProfileRow
+          // Querying public.profiles using the exact schema columns
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", sessionData.user.id)
+            .single()
           
-          if (profile) {
-            const nextRole = normalizeRole(profile.role)
-            setProfileName(profile.name ?? null)
-            setProfileRole(nextRole || "student")
-            setAuthed(true)
-            setView(nextRole === "teacher" || nextRole === "researcher" ? "portal" : "studio")
-          } else {
-            // Fallback configuration if your Supabase table row is currently empty
-            setProfileName(null)
+          if (profileError || !profile) {
+            // Fallback default setup if row profile hasn't loaded yet
+            setProfileName(sessionData.user.email?.split("@")[0] || "Scholar")
             setProfileRole("student") 
             setAuthed(true)
             setView("studio")
+            return
           }
+
+          const parsedProfile = profile as ProfileRow
+          const nextRole = normalizeRole(parsedProfile.role)
+          
+          setProfileName(parsedProfile.full_name)
+          setProfileRole(nextRole || "student")
+          setAuthed(true)
+
+          // Direct institutional gates to matching views automatically
+          setView(nextRole === "faculty" || nextRole === "researcher" ? "portal" : "studio")
         }
       } catch (error) {
         if (isMounted) {
@@ -108,7 +119,13 @@ export default function Page() {
     }
   }, [profileRefreshKey])
 
+  // Sync Documents live whenever authentication shifts
   useEffect(() => {
+    if (!authed) {
+      setDocuments([])
+      return
+    }
+
     let isMounted = true
     setDocumentsLoading(true)
     setDocumentsError("")
@@ -116,13 +133,12 @@ export default function Page() {
     const loadDocuments = async () => {
       try {
         const rows = (await researchDocumentsCrud.fetchAll()) as ResearchDocumentRow[]
-
         if (isMounted) {
           setDocuments(rows)
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isMounted) {
-          setDocumentsError("Failed to display backend items. Table schema initialization required.")
+          setDocumentsError(error.message || "Failed to load active user documentation.")
         }
       } finally {
         if (isMounted) {
@@ -136,35 +152,35 @@ export default function Page() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [authed, profileRefreshKey])
 
   const handleNavigate = (nextView: ViewKey) => {
-    // 1. If not logged in, enforce the login gateway
     if (!authed) {
       setView("access")
       return
     }
 
     if (!isTeacher && nextView === "portal") {
-      alert("Access Denied: The Faculty Evaluation Portal is restricted to teacher profiles.")
+      alert("Access Denied: The Faculty Evaluation Portal is restricted to teacher/researcher profiles.")
       return
     }
 
-    // 3. Clear routing resolution if security guards are passed
     setView(nextView)
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
-        <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} />
+        {authed && (
+          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} />
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             view={view}
             authed={authed}
             name={profileName || "Guest"}
-            onSignOut={() => {
-              void supabase.auth.signOut()
+            onSignOut={async () => {
+              await supabase.auth.signOut()
               setAuthed(false)
               setProfileName(null)
               setProfileRole(null)
@@ -199,14 +215,16 @@ export default function Page() {
           <div>
             <p className="font-medium">Supabase Integration Status</p>
             <p className="text-muted-foreground">
-              Connected table endpoint: <span className="font-medium">research_documents</span>. Populate database rows inside the Supabase Studio dashboard to render files live.
+              Connected table endpoint: <span className="font-medium">research_documents</span>. Row extraction utilizes row level security tied to the logged in session.
             </p>
           </div>
 
-          {documentsLoading ? (
+          {!authed ? (
+            <p className="text-muted-foreground italic">Please sign in to view active cloud data tables.</p>
+          ) : documentsLoading ? (
             <p className="text-muted-foreground">Syncing cloud tables...</p>
           ) : documentsError ? (
-            <p className="text-amber-600 font-medium">{documentsError}</p>
+            <p className="text-amber-600 font-medium">RLS Active Error: {documentsError}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border bg-background">
               <table className="min-w-full border-collapse text-left text-xs">
@@ -232,7 +250,7 @@ export default function Page() {
                   {documents.length === 0 ? (
                     <tr>
                       <td className="px-3 py-4 text-muted-foreground" colSpan={14}>
-                        No rows found in research_documents. Cloud data sync active.
+                        No rows found in research_documents for this account yet. Cloud data sync active.
                       </td>
                     </tr>
                   ) : (
@@ -263,3 +281,4 @@ export default function Page() {
       </section>
     </div>
   )
+}

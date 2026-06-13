@@ -3,8 +3,10 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Mail, Lock, ChevronDown, ShieldCheck } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { profilesCrud } from "@/lib/crud"
 
-const ROLES = ["Student", "Teacher / Mentor", "Researcher"]
+const ROLES = ["Student", "Faculty", "Researcher"] as const
 const DOMAINS = [
   "Computer Engineering",
   "Electrical Engineering",
@@ -17,8 +19,76 @@ const DOMAINS = [
 export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState(ROLES[2])
+  const [role, setRole] = useState<typeof ROLES[number]>("Student")
   const [domain, setDomain] = useState(DOMAINS[0])
+  const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setErrorMessage("")
+
+    // 1. Enforce QU Email Domain Checks
+    const lowerEmail = email.trim().toLowerCase()
+    if (!lowerEmail.endsWith("@qu.edu.qa") && !lowerEmail.endsWith("@student.qu.edu.qa")) {
+      setErrorMessage("Access Denied: You must use a valid Qatar University email address.")
+      setLoading(false)
+      return
+    }
+
+    try {
+      // 2. Map frontend visual roles to the exact Postgres Enum lowercases
+      let dbRole: "student" | "faculty" | "researcher" = "student"
+      if (role === "Faculty") dbRole = "faculty"
+      if (role === "Researcher") dbRole = "researcher"
+
+      // 3. Attempt to sign in via Supabase Auth
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: lowerEmail,
+        password: password,
+      })
+
+      let activeUser = signInData?.user
+
+      // 4. Sign-up Flow: If the user doesn't exist, register them automatically
+      if (signInError && signInError.message.includes("Invalid login credentials")) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: lowerEmail,
+          password: password,
+        })
+
+        if (signUpError) throw signUpError
+        activeUser = signUpData?.user
+
+        // 5. Build corresponding Row Entry in your 'public.profiles' table
+        if (activeUser) {
+          // Extract a tentative default full name from email handle
+          const generatedName = lowerEmail.split("@")[0].replace(".", " ")
+          
+          await profilesCrud.insertRecord({
+            id: activeUser.id,
+            full_name: generatedName.replace(/\b\w/g, (c) => c.toUpperCase()),
+            qu_email: lowerEmail,
+            role: dbRole,
+            academic_domain: domain,
+          })
+        }
+      } else if (signInError) {
+        throw signInError
+      }
+
+      // 6. Access Granted! Notify the root layout to sync values
+      if (activeUser) {
+        onAuthed()
+      }
+    } catch (err: any) {
+      console.error(err)
+      setErrorMessage(err.message || "An error occurred during authentication.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
@@ -68,16 +138,19 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
       {/* Form panel */}
       <div className="flex items-center justify-center p-6 sm:p-10">
         <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            onAuthed()
-          }}
+          onSubmit={handleSubmit}
           className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-7 shadow-sm"
         >
           <div className="space-y-1">
             <h3 className="text-xl font-semibold tracking-tight text-card-foreground">Sign in to your workspace</h3>
             <p className="text-sm text-muted-foreground">Use your Qatar University academic credentials.</p>
           </div>
+
+          {errorMessage && (
+            <div className="p-3 text-xs bg-destructive/10 text-destructive font-medium rounded-lg border border-destructive/20">
+              {errorMessage}
+            </div>
+          )}
 
           <Field label="QU Academic Email">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
@@ -109,15 +182,15 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Role">
-              <SelectBox value={role} onChange={setRole} options={ROLES} />
+              <SelectBox value={role} onChange={(v) => setRole(v as any)} options={[...ROLES]} />
             </Field>
             <Field label="Domain">
               <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
             </Field>
           </div>
 
-          <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            Enter Workspace
+          <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+            {loading ? "Verifying Credentials..." : "Enter Workspace"}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
