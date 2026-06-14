@@ -60,20 +60,7 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
 
         if (signUpError) throw signUpError
         activeUser = signUpData?.user
-
-        // 5. Build corresponding Row Entry in your 'public.profiles' table
-        if (activeUser) {
-          // Extract a tentative default full name from email handle
-          const generatedName = lowerEmail.split("@")[0].replace(".", " ")
-          
-          await profilesCrud.insertRecord({
-            id: activeUser.id,
-            full_name: generatedName.replace(/\b\w/g, (c) => c.toUpperCase()),
-            qu_email: lowerEmail,
-            role: dbRole,
-            academic_domain: domain,
-          })
-        }
+        
       } else if (signInError) {
         throw signInError
       }
