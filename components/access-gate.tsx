@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Mail, Lock, ChevronDown, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { profilesCrud } from "@/lib/crud"
 
 const ROLES = ["Student", "Faculty", "Researcher"] as const
 const DOMAINS = [
@@ -53,19 +52,26 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
 
       // 4. Sign-up Flow: If the user doesn't exist, register them automatically
       if (signInError && signInError.message.includes("Invalid login credentials")) {
+        const generatedName = lowerEmail.split("@")[0].replace(".", " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: lowerEmail,
           password: password,
+          options: {
+            data: {
+              full_name: generatedName,
+              role: dbRole,
+              academic_domain: domain, // This fixes your "defaulting to general" issue instantly
+            },
+          },
         })
 
         if (signUpError) throw signUpError
         activeUser = signUpData?.user
-        
       } else if (signInError) {
         throw signInError
       }
 
-      // 6. Access Granted! Notify the root layout to sync values
       if (activeUser) {
         onAuthed()
       }
@@ -182,7 +188,7 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
 
           <p className="text-center text-xs text-muted-foreground">
             Protected by QU single sign-on · Need help?{" "}
-            <span className="font-medium text-primary">Contact IT Services</span>
+            <span className="font-medium text-primary cursor-pointer">Contact IT Services</span>
           </p>
         </form>
       </div>
