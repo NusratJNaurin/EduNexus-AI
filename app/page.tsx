@@ -80,14 +80,15 @@ export default function Page() {
             .from("profiles")
             .select("*")
             .eq("id", sessionData.user.id)
-            .single()
+            .maybeSingle()
           
+          // FIXED: Removed the auto-login fallback breach.
+          // If no profile row is successfully fetched from the database, do NOT bypass the gate.
           if (profileError || !profile) {
-            // Fallback default setup if row profile hasn't fully loaded in database transaction yet
-            setProfileName(sessionData.user.email?.split("@")[0] || "Scholar")
-            setProfileRole("student") 
-            setAuthed(true)
-            setView("studio")
+            setAuthed(false)
+            setProfileName(null)
+            setProfileRole(null)
+            setView("access")
             return
           }
 
@@ -98,8 +99,13 @@ export default function Page() {
           setProfileRole(nextRole || "student")
           setAuthed(true)
 
-          // FIXED: Direct institutional gates to matching views automatically on SUCCESSFUL profile fetch
-          setView(nextRole === "faculty" || nextRole === "researcher" ? "portal" : "studio")
+          // Only route away from the access gate if we have a verified profile row
+          setView((currentView) => {
+            if (currentView === "access") {
+              return nextRole === "faculty" || nextRole === "researcher" ? "portal" : "studio"
+            }
+            return currentView
+          })
         }
       } catch (error) {
         if (isMounted) {
