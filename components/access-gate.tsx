@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, Mail, Lock, ChevronDown, ShieldCheck } from "lucide-react"
+import { ChevronDown, GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 const ROLES = ["Student", "Faculty", "Researcher"] as const
@@ -15,27 +15,23 @@ const DOMAINS = [
   "Data Science",
 ]
 
-export function AccessGate({
-  onAuthed,
-}: {
-  onAuthed: (role: "student" | "faculty" | "researcher") => void
-}) {
-  const [isSignUp, setIsSignUp] = useState(false) 
-  const [fullName, setFullName] = useState("")
+type AuthRole = "student" | "faculty" | "researcher"
 
+export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void }) {
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<typeof ROLES[number]>("Student")
+  const [role, setRole] = useState<(typeof ROLES)[number]>("Student")
   const [domain, setDomain] = useState(DOMAINS[0])
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setErrorMessage("")
 
-    // 1. Enforce QU Email Domain Checks
     const lowerEmail = email.trim().toLowerCase()
     if (!lowerEmail.endsWith("@qu.edu.qa") && !lowerEmail.endsWith("@student.qu.edu.qa")) {
       setErrorMessage("Access Denied: You must use a valid Qatar University email address.")
@@ -43,56 +39,53 @@ export function AccessGate({
       return
     }
 
-    // 2. Map frontend visual roles to the exact Postgres Enum lowercases
-    let dbRole: "student" | "faculty" | "researcher" = "student"
+    let dbRole: AuthRole = "student"
     if (role === "Faculty") dbRole = "faculty"
     if (role === "Researcher") dbRole = "researcher"
 
-
     try {
-    if (isSignUp) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: lowerEmail,
-        password: password,
-        options: {
-          // Passes custom details directly into the user's secure metadata payload
-          data: {
-            full_name: fullName || "New Academic User",
-            role: dbRole,
-            domain: domain,
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email: lowerEmail,
+          password,
+          options: {
+            data: {
+              full_name: fullName || "New Academic User",
+              role: dbRole,
+              academic_domain: domain,
+            },
           },
-        },
-      })
+        })
 
-      if (signUpError) throw signUpError
+        if (error) throw error
+        if (!data?.user) throw new Error("Account creation did not return a valid user.")
 
-      if (signUpData?.user) {
         alert("Account created successfully! You can now log in.")
-        setIsSignUp(false) // Switch them back to the login view
+        setIsSignUp(false)
+        setErrorMessage("")
+        return
       }
 
-    } else {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: lowerEmail,
-        password: password,
+        password,
       })
 
-      if (signInError) throw signInError
-      if (!signInData?.user) throw new Error("Authentication failed.")
+      if (error) throw error
+      if (!data?.user) throw new Error("Authentication failed.")
 
       onAuthed(dbRole)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An error occurred during authentication."
+      console.error(err)
+      setErrorMessage(message)
+    } finally {
+      setLoading(false)
     }
-  } catch (err: any) {
-    console.error(err)
-    setErrorMessage(err.message || "An error occurred during authentication.")
-  } finally {
-    setLoading(false)
   }
-
 
   return (
     <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
-      {/* Brand panel */}
       <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -113,18 +106,18 @@ export function AccessGate({
             Collaborative Academic Knowledge Workspace & Research Sandbox
           </h2>
           <p className="text-pretty leading-relaxed text-primary-foreground/75">
-            Ground every research conversation in verifiable sources. Map methodologies, defend your
-            findings, and surface the gaps worth pursuing.
+            Ground every research conversation in verifiable sources. Map methodologies, defend your findings, and
+            surface the gaps worth pursuing.
           </p>
           <div className="grid grid-cols-3 gap-4 pt-2">
             {[
               ["12.4k", "Papers indexed"],
               ["860", "Active scholars"],
               ["99.9%", "Source fidelity"],
-            ].map(([v, l]) => (
-              <div key={l}>
-                <p className="text-2xl font-semibold text-accent">{v}</p>
-                <p className="text-xs text-primary-foreground/60">{l}</p>
+            ].map(([value, label]) => (
+              <div key={label}>
+                <p className="text-2xl font-semibold text-accent">{value}</p>
+                <p className="text-xs text-primary-foreground/60">{label}</p>
               </div>
             ))}
           </div>
@@ -135,19 +128,20 @@ export function AccessGate({
         </p>
       </div>
 
-      {/* Form panel */}
       <div className="flex items-center justify-center p-6 sm:p-10">
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-7 shadow-sm"
         >
           <div className="space-y-1">
-            <h3 className="text-xl font-semibold tracking-tight text-card-foreground">Sign in to your workspace</h3>
+            <h3 className="text-xl font-semibold tracking-tight text-card-foreground">
+              {isSignUp ? "Create your workspace account" : "Sign in to your workspace"}
+            </h3>
             <p className="text-sm text-muted-foreground">Use your Qatar University academic credentials.</p>
           </div>
 
           {errorMessage && (
-            <div className="p-3 text-xs bg-destructive/10 text-destructive font-medium rounded-lg border border-destructive/20">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-medium text-destructive">
               {errorMessage}
             </div>
           )}
@@ -167,25 +161,6 @@ export function AccessGate({
             </Field>
           )}
 
-          {/* Update your main action button text dynamically */}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Processing..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
-          </Button>
-
-          {/* Add this toggle switch right below your main action button */}
-          <div className="text-center text-sm pt-2">
-            {isSignUp ? "Already have an account? " : "New to EduNexus? "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setErrorMessage("")
-              }}
-              className="font-medium text-primary hover:underline bg-transparent border-none cursor-pointer"
-            >
-              {isSignUp ? "Sign In instead" : "Create an account"}
-            </button>
-          </div>
           <Field label="QU Academic Email">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
               <Mail className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -216,7 +191,7 @@ export function AccessGate({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Role">
-              <SelectBox value={role} onChange={(v) => setRole(v as any)} options={[...ROLES]} />
+              <SelectBox value={role} onChange={(value) => setRole(value as (typeof ROLES)[number])} options={[...ROLES]} />
             </Field>
             <Field label="Domain">
               <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
@@ -224,12 +199,26 @@ export function AccessGate({
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            {loading ? "Verifying Credentials..." : "Enter Workspace"}
+            {loading ? "Verifying Credentials..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
           </Button>
+
+          <div className="text-center text-sm">
+            {isSignUp ? "Already have an account? " : "New to EduNexus? "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp((current) => !current)
+                setErrorMessage("")
+              }}
+              className="cursor-pointer border-none bg-transparent font-medium text-primary hover:underline"
+            >
+              {isSignUp ? "Sign in instead" : "Create an account"}
+            </button>
+          </div>
 
           <p className="text-center text-xs text-muted-foreground">
             Protected by QU single sign-on · Need help?{" "}
-            <span className="font-medium text-primary cursor-pointer">Contact IT Services</span>
+            <span className="cursor-pointer font-medium text-primary">Contact IT Services</span>
           </p>
         </form>
       </div>
@@ -262,9 +251,9 @@ function SelectBox({
         onChange={(e) => onChange(e.target.value)}
         className="w-full appearance-none rounded-lg border border-input bg-background py-2.5 pl-3 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring"
       >
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
           </option>
         ))}
       </select>

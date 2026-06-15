@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Sidebar, type ViewKey } from "@/components/sidebar"
-import { AccessGate } from "@/components/access-gate"
+import { AccessGate } from "../components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
 import { TeacherPortal } from "@/components/teacher-portal"
@@ -196,7 +196,7 @@ export default function Page() {
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {view === "access" && (
                 <AccessGate
-                  onAuthed={(role) => {
+                  onAuthed={(role: "student" | "faculty" | "researcher") => {
                     setAuthed(true)
                     setProfileRole(role)
                     setView(role === "faculty" || role === "researcher" ? "portal" : "studio")
