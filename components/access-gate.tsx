@@ -46,39 +46,21 @@ export function AccessGate({
       if (role === "Faculty") dbRole = "faculty"
       if (role === "Researcher") dbRole = "researcher"
 
-      // 3. Attempt to sign in via Supabase Auth
+      // 3. Attempt to sign in via Supabase Auth and stop immediately on failure
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: lowerEmail,
         password: password,
       })
 
-      let activeUser = signInData?.user
-
-      // 4. Sign-up Flow: If the user doesn't exist, register them automatically
-      if (signInError && signInError.message.includes("Invalid login credentials")) {
-        const generatedName = lowerEmail.split("@")[0].replace(".", " ").replace(/\b\w/g, (c) => c.toUpperCase())
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: lowerEmail,
-          password: password,
-          options: {
-            data: {
-              full_name: generatedName,
-              role: dbRole,
-              academic_domain: domain, // This fixes your "defaulting to general" issue instantly
-            },
-          },
-        })
-
-        if (signUpError) throw signUpError
-        activeUser = signUpData?.user
-      } else if (signInError) {
+      if (signInError) {
         throw signInError
       }
 
-      if (activeUser) {
-        onAuthed(dbRole)
+      if (!signInData?.user) {
+        throw new Error("Authentication did not return a valid user session.")
       }
+
+      onAuthed(dbRole)
     } catch (err: any) {
       console.error(err)
       setErrorMessage(err.message || "An error occurred during authentication.")
