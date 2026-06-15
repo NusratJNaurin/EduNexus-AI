@@ -20,6 +20,9 @@ export function AccessGate({
 }: {
   onAuthed: (role: "student" | "faculty" | "researcher") => void
 }) {
+  const [isSignUp, setIsSignUp] = useState(false) 
+  const [fullName, setFullName] = useState("")
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<typeof ROLES[number]>("Student")
@@ -40,34 +43,52 @@ export function AccessGate({
       return
     }
 
-    try {
-      // 2. Map frontend visual roles to the exact Postgres Enum lowercases
-      let dbRole: "student" | "faculty" | "researcher" = "student"
-      if (role === "Faculty") dbRole = "faculty"
-      if (role === "Researcher") dbRole = "researcher"
+    // 2. Map frontend visual roles to the exact Postgres Enum lowercases
+    let dbRole: "student" | "faculty" | "researcher" = "student"
+    if (role === "Faculty") dbRole = "faculty"
+    if (role === "Researcher") dbRole = "researcher"
 
-      // 3. Attempt to sign in via Supabase Auth and stop immediately on failure
+
+    try {
+    if (isSignUp) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: lowerEmail,
+        password: password,
+        options: {
+          // Passes custom details directly into the user's secure metadata payload
+          data: {
+            full_name: fullName || "New Academic User",
+            role: dbRole,
+            domain: domain,
+          },
+        },
+      })
+
+      if (signUpError) throw signUpError
+
+      if (signUpData?.user) {
+        alert("Account created successfully! You can now log in.")
+        setIsSignUp(false) // Switch them back to the login view
+      }
+
+    } else {
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: lowerEmail,
         password: password,
       })
 
-      if (signInError) {
-        throw signInError
-      }
-
-      if (!signInData?.user) {
-        throw new Error("Authentication did not return a valid user session.")
-      }
+      if (signInError) throw signInError
+      if (!signInData?.user) throw new Error("Authentication failed.")
 
       onAuthed(dbRole)
-    } catch (err: any) {
-      console.error(err)
-      setErrorMessage(err.message || "An error occurred during authentication.")
-    } finally {
-      setLoading(false)
     }
+  } catch (err: any) {
+    console.error(err)
+    setErrorMessage(err.message || "An error occurred during authentication.")
+  } finally {
+    setLoading(false)
   }
+
 
   return (
     <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
@@ -131,6 +152,40 @@ export function AccessGate({
             </div>
           )}
 
+          {isSignUp && (
+            <Field label="Full Name">
+              <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Hazim Ahmed"
+                  className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+            </Field>
+          )}
+
+          {/* Update your main action button text dynamically */}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Processing..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
+          </Button>
+
+          {/* Add this toggle switch right below your main action button */}
+          <div className="text-center text-sm pt-2">
+            {isSignUp ? "Already have an account? " : "New to EduNexus? "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setErrorMessage("")
+              }}
+              className="font-medium text-primary hover:underline bg-transparent border-none cursor-pointer"
+            >
+              {isSignUp ? "Sign In instead" : "Create an account"}
+            </button>
+          </div>
           <Field label="QU Academic Email">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
               <Mail className="size-4 text-muted-foreground" aria-hidden="true" />
