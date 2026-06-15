@@ -15,7 +15,11 @@ const DOMAINS = [
   "Data Science",
 ]
 
-export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
+export function AccessGate({
+  onAuthed,
+}: {
+  onAuthed: (role: "student" | "faculty" | "researcher") => void
+}) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<typeof ROLES[number]>("Student")
@@ -73,7 +77,7 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
       }
 
       if (activeUser) {
-        onAuthed()
+        onAuthed(dbRole)
       }
     } catch (err: any) {
       console.error(err)

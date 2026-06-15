@@ -7,9 +7,8 @@ import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
 import { TeacherPortal } from "@/components/teacher-portal"
 import { Topbar } from "@/components/topbar"
-import { researchDocumentsCrud } from "@/lib/crud" // Ensure storage exports are available here if imported
-
-const supabase = (researchDocumentsCrud as { supabase?: any }).supabase
+import { researchDocumentsCrud } from "@/lib/crud"
+import { supabase } from "@/lib/supabase"
 
 type ResearchDocumentRow = {
   id: string
@@ -84,7 +83,7 @@ export default function Page() {
             .single()
           
           if (profileError || !profile) {
-            // Fallback default setup if row profile hasn't loaded yet
+            // Fallback default setup if row profile hasn't fully loaded in database transaction yet
             setProfileName(sessionData.user.email?.split("@")[0] || "Scholar")
             setProfileRole("student") 
             setAuthed(true)
@@ -99,7 +98,7 @@ export default function Page() {
           setProfileRole(nextRole || "student")
           setAuthed(true)
 
-          // Direct institutional gates to matching views automatically
+          // FIXED: Direct institutional gates to matching views automatically on SUCCESSFUL profile fetch
           setView(nextRole === "faculty" || nextRole === "researcher" ? "portal" : "studio")
         }
       } catch (error) {
@@ -191,7 +190,10 @@ export default function Page() {
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {view === "access" && (
                 <AccessGate
-                  onAuthed={() => {
+                  onAuthed={(role) => {
+                    setAuthed(true)
+                    setProfileRole(role)
+                    setView(role === "faculty" || role === "researcher" ? "portal" : "studio")
                     setProfileRefreshKey((current) => current + 1)
                   }}
                 />
