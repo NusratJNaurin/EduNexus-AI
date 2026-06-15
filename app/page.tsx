@@ -177,7 +177,7 @@ export default function Page() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         {authed && (
-          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} />
+          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} name={profileName} role={profileRole}/>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar

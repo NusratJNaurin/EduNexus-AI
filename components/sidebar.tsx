@@ -30,15 +30,31 @@ export function Sidebar({
   onNavigate,
   authed,
   canAccessPortal,
+  name,
+  role,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   authed: boolean
   canAccessPortal: boolean
+  name?: string | null
+  role?: string | null
 }) {
   const visibleNav = authed
     ? NAV.filter((item) => (canAccessPortal ? item.key === "portal" : item.key !== "portal"))
     : NAV.filter((item) => item.key === "access")
+
+  // Helper logic to cleanly extract double initials from names dynamically
+  const getInitials = (fullName: string | null | undefined) => {
+    if (!fullName) return "U"
+    return fullName
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
@@ -93,15 +109,18 @@ export function Sidebar({
         })}
       </nav>
 
+      {/* FIXED: Dynamic Profile Identifier Interface */}
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
-            {authed ? "AH" : "—"}
+            {authed ? getInitials(name) : "—"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{authed ? "Dr. Aisha Hassan" : "Guest"}</p>
-            <p className="truncate text-xs text-sidebar-foreground/50">
-              {authed ? "Researcher · Computer Eng." : "Not signed in"}
+            <p className="truncate text-sm font-medium">
+              {authed ? (name || "Academic User") : "Guest"}
+            </p>
+            <p className="truncate text-xs text-sidebar-foreground/50 capitalize">
+              {authed ? (role || "Student") : "Not signed in"}
             </p>
           </div>
         </div>
