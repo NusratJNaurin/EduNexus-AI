@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar, type ViewKey } from "@/components/sidebar"
 import { AccessGate } from "../components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
-import { TeacherPortal } from "@/components/teacher-portal"
+import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
 import { researchDocumentsCrud } from "@/lib/crud"
 import { supabase } from "@/lib/supabase"
@@ -47,54 +48,66 @@ const formatValue = (value: unknown) => {
 }
 
 export default function Page() {
+  const router = useRouter()
   const [view, setView] = useState<ViewKey>("access")
   const [authed, setAuthed] = useState(false)
+  const [profileId, setProfileId] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<string | null>(null)
   const [profileRole, setProfileRole] = useState<string | null>(null)
   const [profileRefreshKey, setProfileRefreshKey] = useState(0)
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documentsError, setDocumentsError] = useState("")
+  const authUserIdRef = useRef<string | null>(null)
 
-  const isTeacher = normalizeRole(profileRole) === "faculty" || normalizeRole(profileRole) === "researcher"
+  const isFaculty = normalizeRole(profileRole) === "faculty"
+
+  const resetWorkspaceState = () => {
+    setAuthed(false)
+    setProfileId(null)
+    setProfileName(null)
+    setProfileRole(null)
+    setView("access")
+    setDocuments([])
+    setDocumentsLoading(false)
+    setDocumentsError("")
+  }
 
   // Monitor Authentication Session Status and Row Profiles
   useEffect(() => {
     let isMounted = true
+    let authSubscription: { unsubscribe: () => void } | null = null
 
-    const loadProfile = async () => {
+    const loadProfile = async (userId?: string | null) => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getUser()
+        const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null
 
         if (isMounted) {
-          if (sessionError || !sessionData.user) {
-            setAuthed(false)
-            setProfileName(null)
-            setProfileRole(null)
-            setView("access")
+          if (!resolvedUserId) {
+            resetWorkspaceState()
             return
           }
+
+          authUserIdRef.current = resolvedUserId
 
           // Querying public.profiles using the exact schema columns
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("*")
-            .eq("id", sessionData.user.id)
+            .eq("id", resolvedUserId)
             .maybeSingle()
           
           // FIXED: Removed the auto-login fallback breach.
           // If no profile row is successfully fetched from the database, do NOT bypass the gate.
           if (profileError || !profile) {
-            setAuthed(false)
-            setProfileName(null)
-            setProfileRole(null)
-            setView("access")
+            resetWorkspaceState()
             return
           }
 
           const parsedProfile = profile as ProfileRow
           const nextRole = normalizeRole(parsedProfile.role)
           
+          setProfileId(parsedProfile.id)
           setProfileName(parsedProfile.full_name)
           setProfileRole(nextRole || "student")
           setAuthed(true)
@@ -102,27 +115,54 @@ export default function Page() {
           // Only route away from the access gate if we have a verified profile row
           setView((currentView) => {
             if (currentView === "access") {
-              return nextRole === "faculty" || nextRole === "researcher" ? "portal" : "studio"
+              return nextRole === "faculty" ? "portal" : "studio"
             }
             return currentView
           })
         }
       } catch (error) {
         if (isMounted) {
-          setAuthed(false)
-          setProfileName(null)
-          setProfileRole(null)
-          setView("access")
+          resetWorkspaceState()
         }
       }
     }
 
-    void loadProfile()
+    const initializeAuthState = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      authUserIdRef.current = user?.id ?? null
+      await loadProfile(user?.id ?? null)
+
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        const nextUserId = session?.user?.id ?? null
+
+        if (event === "SIGNED_OUT" || (authUserIdRef.current && nextUserId !== authUserIdRef.current)) {
+          authUserIdRef.current = nextUserId
+          resetWorkspaceState()
+          router.refresh()
+          return
+        }
+
+        authUserIdRef.current = nextUserId
+
+        if (nextUserId) {
+          setProfileRefreshKey((current) => current + 1)
+          void loadProfile(nextUserId)
+        }
+      })
+
+      authSubscription = data.subscription
+    }
+
+    void initializeAuthState()
 
     return () => {
       isMounted = false
+      authSubscription?.unsubscribe()
     }
-  }, [profileRefreshKey])
+  }, [profileRefreshKey, router])
 
   // Sync Documents live whenever authentication shifts
   useEffect(() => {
@@ -165,8 +205,8 @@ export default function Page() {
       return
     }
 
-    if (!isTeacher && nextView === "portal") {
-      alert("Access Denied: The Faculty Evaluation Portal is restricted to teacher/researcher profiles.")
+    if (!isFaculty && nextView === "portal") {
+      alert("Access Denied: The Faculty Evaluation Portal is restricted to faculty profiles.")
       return
     }
 
@@ -177,7 +217,7 @@ export default function Page() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         {authed && (
-          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isTeacher} name={profileName} role={profileRole} />
+          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isFaculty} name={profileName} role={profileRole} />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
@@ -186,10 +226,8 @@ export default function Page() {
             name={profileName || "Guest"}
             onSignOut={async () => {
               await supabase.auth.signOut()
-              setAuthed(false)
-              setProfileName(null)
-              setProfileRole(null)
-              setView("access")
+              resetWorkspaceState()
+              router.refresh()
             }}
           />
           <main className="min-w-0 flex-1 overflow-x-hidden">
@@ -199,15 +237,15 @@ export default function Page() {
                   onAuthed={(role: "student" | "faculty" | "researcher") => {
                     setAuthed(true)
                     setProfileRole(role)
-                    setView(role === "faculty" || role === "researcher" ? "portal" : "studio")
+                    setView(role === "faculty" ? "portal" : "studio")
                     setProfileRefreshKey((current) => current + 1)
                   }}
                 />
               )}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && isTeacher && <TeacherPortal />}
-              {view === "portal" && !isTeacher && (
+              {view === "portal" && isFaculty && <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />}
+              {view === "portal" && !isFaculty && (
                 <div className="p-8 text-center text-destructive font-medium">
                   Access Denied: You do not have permission to view the evaluation workspace dashboard.
                 </div>

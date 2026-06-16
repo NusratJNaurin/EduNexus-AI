@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { BlockMath } from "react-katex"
 import {
   Search,
   FileText,
@@ -15,7 +16,8 @@ import {
   AlertCircle
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { researchDocumentsCrud } from "@/lib/crud"
+import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
+import "katex/dist/katex.min.css"
 
 type DocumentRow = {
   id: string
@@ -32,6 +34,13 @@ type DocumentRow = {
   methodology_latex: string | null
   created_at: string
 }
+
+const normalizeLatex = (latex: string) =>
+  latex
+    .trim()
+    .replace(/^\$\$?/, "")
+    .replace(/\$\$$/, "")
+    .replace(/\\\\/g, "\\")
 
 export function DocumentStudio() {
   const [documents, setDocuments] = useState<DocumentRow[]>([])
@@ -112,6 +121,13 @@ export function DocumentStudio() {
         complexity_score: (Math.random() * 20 + 60).toFixed(1),
         methodology_latex: "Latency = \\frac{T_{cloud} - T_{edge}}{T_{cloud}}",
       }) as DocumentRow
+
+      await conceptNodesCrud.insertRecord({
+        owner_id: user.id,
+        document_id: insertedRow.id,
+        node_type: "paper",
+        label: insertedRow.title,
+      })
 
       // F. Re-sync state UI cleanly
       setDocuments((prev) => [insertedRow, ...prev])
@@ -263,9 +279,15 @@ export function DocumentStudio() {
         {/* Dynamic LaTeX Formula Rendering */}
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="mb-2 text-sm font-semibold text-card-foreground">Methodology Formula Architecture</p>
-          <pre className="overflow-x-auto rounded-lg bg-primary p-4 font-mono text-sm text-primary-foreground">
-            <code>{activeDoc?.methodology_latex || "Formula notation matches document context stream logic."}</code>
-          </pre>
+          {activeDoc?.methodology_latex ? (
+            <div className="overflow-x-auto rounded-lg border border-border bg-background p-4 text-foreground shadow-sm">
+              <BlockMath math={normalizeLatex(activeDoc.methodology_latex)} errorColor="#dc2626" />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              Formula notation matches document context stream logic.
+            </div>
+          )}
         </div>
 
         {/* Grounded Prompt Terminal */}
