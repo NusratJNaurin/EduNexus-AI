@@ -6,11 +6,9 @@ import { BlockMath } from "react-katex"
 import {
   Search,
   FileText,
-  Filter,
   Highlighter,
   Send,
   Sparkles,
-  Quote,
   UploadCloud,
   Loader2,
   AlertCircle
@@ -35,6 +33,12 @@ type DocumentRow = {
   created_at: string
 }
 
+type ChatMessage = {
+  id: string
+  text: string
+  isUser: boolean
+}
+
 const normalizeLatex = (latex: string) =>
   latex
     .trim()
@@ -51,12 +55,36 @@ export function DocumentStudio() {
   const [searchQuery, setSearchQuery] = useState("")
   const [chatInput, setChatInput] = useState("")
   
+  // Interactive Chat Studio States
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [sendingChat, setSendingChat] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 1. Fetch User Documents on Mount
   useEffect(() => {
     loadUserDocuments()
   }, [])
+
+  // Initialize base message context when active document toggles
+  useEffect(() => {
+    if (activeDoc) {
+      setMessages([
+        {
+          id: "init",
+          text: `Synthesize the main methodology parameters within "${activeDoc.title}".`,
+          isUser: true
+        },
+        {
+          id: "init-reply",
+          text: `Based directly on the text extracted from the document metadata, the model uses a core relational structure modeled as:\n\n${activeDoc.methodology_latex || "No formula declared"}\n\nKeywords cross-referenced include: ${activeDoc.keywords?.join(", ") || "None"}.`,
+          isUser: false
+        }
+      ])
+    } else {
+      setMessages([])
+    }
+  }, [activeDoc])
 
   const loadUserDocuments = async () => {
     setLoadingDocs(true)
@@ -92,7 +120,7 @@ export function DocumentStudio() {
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
       const uniquePath = `${user.id}/${Date.now()}_${cleanFileName}`
 
-      // C. Push binary payload to your non-public storage bucket
+      // C. Push binary payload to your storage bucket
       const { data: storageData, error: storageError } = await supabase.storage
         .from("documents")
         .upload(uniquePath, file, {
@@ -102,23 +130,17 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
-      // D. Generate secure shareable public URL endpoint mapping
-      const { data: urlData } = supabase.storage
-        .from("documents")
-        .getPublicUrl(uniquePath)
-
-      // E. Write a corresponding descriptor row to 'public.research_documents' via RLS
+      // D. Write corresponding descriptor row to 'public.research_documents'
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""), // Strip extension for beautiful title handling
+        title: file.name.replace(/\.[^/.]+$/, ""), // Strip extension for clean title handling
         file_name: file.name,
-        file_url: urlData.publicUrl,
         file_size_bytes: file.size,
         page_count: Math.floor(Math.random() * 15) + 5, // Mock extraction metric
         extracted_text: `Extracted content stream for ${file.name}: We investigate academic variables matching Qatar University computational structures. Statistical significance was confirmed across testing cohorts (p < 0.01).`,
         keywords: ["Academic", "QU Research", "Dataset Analysis"],
-        readability_score: (Math.random() * 30 + 40).toFixed(1),
-        complexity_score: (Math.random() * 20 + 60).toFixed(1),
+        readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
+        complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
         methodology_latex: "Latency = \\frac{T_{cloud} - T_{edge}}{T_{cloud}}",
       }) as DocumentRow
 
@@ -129,7 +151,7 @@ export function DocumentStudio() {
         label: insertedRow.title,
       })
 
-      // F. Re-sync state UI cleanly
+      // E. Re-sync state UI cleanly
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
     } catch (err: any) {
@@ -141,9 +163,61 @@ export function DocumentStudio() {
     }
   }
 
-  // Filter list based on top keyword search bar
+  // 3. Wired Asynchronous Input & Mock Streaming Response Form Submittal Handler
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const prompt = chatInput.trim()
+    if (!prompt || !activeDoc || sendingChat) return
+
+    setChatInput("")
+    setSendingChat(true)
+
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      text: prompt,
+      isUser: true
+    }
+    setMessages((prev) => [...prev, userMsg])
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          formulaContext: activeDoc.methodology_latex || "",
+          documentText: activeDoc.extracted_text || ""
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get reply.")
+      }
+
+      const realReply: ChatMessage = {
+        id: `reply-${Date.now()}`,
+        text: data.reply,
+        isUser: false
+      }
+      setMessages((prev) => [...prev, realReply])
+
+    } catch (err: any) {
+      console.error("Failed to fetch live AI response:", err)
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
+        text: `Error processing query: ${err.message || "Could not connect to the API backend."}`,
+        isUser: false
+      }])
+    } finally {
+      setSendingChat(false)
+    }
+  }
+
+  // Filter list based on keyword search query match
   const filteredDocs = documents.filter(doc => 
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     doc.file_name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -162,7 +236,6 @@ export function DocumentStudio() {
             />
           </div>
           
-          {/* Hidden File Input trigger */}
           <input 
             type="file" 
             ref={fileInputRef}
@@ -236,10 +309,7 @@ export function DocumentStudio() {
                 {activeDoc.title}
               </h3>
               <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-                <p className="text-foreground font-medium italic bg-muted/30 p-2 rounded border border-border/50">
-                  📄 Cloud Resource URL: <a href={activeDoc.file_url || "#"} target="_blank" rel="noopener noreferrer" className="text-primary underline font-mono text-xs break-all">{activeDoc.file_url || "Unavailable"}</a>
-                </p>
-                <p className="whitespace-pre-wrap pt-2">
+                <p className="whitespace-pre-wrap">
                   {activeDoc.extracted_text || "No structural text was processed from this asset."}
                 </p>
               </div>
@@ -290,53 +360,63 @@ export function DocumentStudio() {
           )}
         </div>
 
-        {/* Grounded Prompt Terminal */}
+        {/* Source-Grounded Interaction Chat Studio */}
         <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card">
-          <div className="flex items-center gap-2 border-b border-border p-3">
+          <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/20">
             <Sparkles className="size-4 text-primary" aria-hidden="true" />
             <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio</p>
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[280px]">
             {activeDoc ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-end">
-                  <p className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-                    Synthesize the main methodology parameters within "{activeDoc.title}".
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    <Sparkles className="size-3.5" aria-hidden="true" />
+              messages.map((m) => (
+                <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
+                  <div className="flex items-start gap-2 max-w-[85%]">
+                    {!m.isUser && (
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground mt-0.5">
+                        <Sparkles className="size-3.5" aria-hidden="true" />
+                      </div>
+                    )}
+                    <div
+                      className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                        m.isUser
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "border border-border bg-background text-foreground rounded-tl-sm whitespace-pre-wrap"
+                      }`}
+                    >
+                      {m.text}
+                    </div>
                   </div>
-                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-border bg-background px-4 py-2.5 text-sm leading-relaxed text-foreground space-y-2">
-                    <p>Based directly on the text extracted from the document metadata, the model uses a core relational structure modeled as:</p>
-                    <code className="block bg-muted p-2 rounded text-xs font-mono">{activeDoc.methodology_latex}</code>
-                    <p>Keywords cross-referenced include: <span className="font-semibold text-primary">{activeDoc.keywords?.join(", ")}</span>.</p>
-                  </div>
                 </div>
-              </div>
+              ))
             ) : (
-              <p className="text-center text-xs text-muted-foreground italic pt-12">Select or upload a document to activate the AI analysis chat stream.</p>
+              <p className="text-center text-xs text-muted-foreground italic pt-12">
+                Select or upload a document to activate the AI analysis chat stream.
+              </p>
+            )}
+            
+            {sendingChat && (
+              <div className="flex justify-start items-center gap-2 text-xs text-muted-foreground italic px-9">
+                <Loader2 className="size-3 animate-spin text-primary" /> Processing logic blocks...
+              </div>
             )}
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              setChatInput("")
-            }}
-            className="flex items-center gap-2 border-t border-border p-3"
-          >
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background">
             <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
               value={chatInput}
-              disabled={!activeDoc}
+              disabled={!activeDoc || sendingChat}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder={activeDoc ? "Ask a source-grounded question..." : "Upload a paper first to interact"}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 text-foreground"
             />
-            <Button type="submit" size="icon" disabled={!activeDoc} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={!activeDoc || !chatInput.trim() || sendingChat} 
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+            >
               <Send className="size-4" />
             </Button>
           </form>

@@ -54,72 +54,61 @@ export default function Page() {
   const [profileId, setProfileId] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<string | null>(null)
   const [profileRole, setProfileRole] = useState<string | null>(null)
-  const [profileRefreshKey, setProfileRefreshKey] = useState(0)
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documentsError, setDocumentsError] = useState("")
+  
   const authUserIdRef = useRef<string | null>(null)
-
   const isFaculty = normalizeRole(profileRole) === "faculty"
 
+  // Explicit, intentional global session reset modifier
   const resetWorkspaceState = () => {
     setAuthed(false)
     setProfileId(null)
     setProfileName(null)
     setProfileRole(null)
-    setView("access")
     setDocuments([])
     setDocumentsLoading(false)
     setDocumentsError("")
+    setView("access")
   }
 
-  // Monitor Authentication Session Status and Row Profiles
+  // 1. Monitor Authentication Session Status and Profile Rows
   useEffect(() => {
     let isMounted = true
     let authSubscription: { unsubscribe: () => void } | null = null
 
-    const loadProfile = async (userId?: string | null) => {
+    const loadProfile = async (userId: string) => {
       try {
-        const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null
+        authUserIdRef.current = userId
 
-        if (isMounted) {
-          if (!resolvedUserId) {
-            resetWorkspaceState()
-            return
-          }
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle()
+        
+        if (!isMounted) return
 
-          authUserIdRef.current = resolvedUserId
-
-          // Querying public.profiles using the exact schema columns
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", resolvedUserId)
-            .maybeSingle()
-          
-          // FIXED: Removed the auto-login fallback breach.
-          // If no profile row is successfully fetched from the database, do NOT bypass the gate.
-          if (profileError || !profile) {
-            resetWorkspaceState()
-            return
-          }
-
-          const parsedProfile = profile as ProfileRow
-          const nextRole = normalizeRole(parsedProfile.role)
-          
-          setProfileId(parsedProfile.id)
-          setProfileName(parsedProfile.full_name)
-          setProfileRole(nextRole || "student")
-          setAuthed(true)
-
-          // Only route away from the access gate if we have a verified profile row
-          setView((currentView) => {
-            if (currentView === "access") {
-              return nextRole === "faculty" ? "portal" : "studio"
-            }
-            return currentView
-          })
+        if (profileError || !profile) {
+          resetWorkspaceState()
+          return
         }
+
+        const parsedProfile = profile as ProfileRow
+        const nextRole = normalizeRole(parsedProfile.role)
+        
+        setProfileId(parsedProfile.id)
+        setProfileName(parsedProfile.full_name)
+        setProfileRole(nextRole || "student")
+        setAuthed(true)
+
+        setView((currentView) => {
+          if (currentView === "access") {
+            return nextRole === "faculty" ? "portal" : "studio"
+          }
+          return currentView
+        })
       } catch (error) {
         if (isMounted) {
           resetWorkspaceState()
@@ -128,27 +117,26 @@ export default function Page() {
     }
 
     const initializeAuthState = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
 
-      authUserIdRef.current = user?.id ?? null
-      await loadProfile(user?.id ?? null)
+      if (user?.id) {
+        await loadProfile(user.id)
+      } else {
+        resetWorkspaceState()
+      }
 
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
         const nextUserId = session?.user?.id ?? null
 
-        if (event === "SIGNED_OUT" || (authUserIdRef.current && nextUserId !== authUserIdRef.current)) {
+        // 2. Clear out everything if user signs out or shifts context
+        if (event === "SIGNED_OUT" || !nextUserId || (authUserIdRef.current && nextUserId !== authUserIdRef.current)) {
           authUserIdRef.current = nextUserId
           resetWorkspaceState()
           router.refresh()
           return
         }
 
-        authUserIdRef.current = nextUserId
-
-        if (nextUserId) {
-          setProfileRefreshKey((current) => current + 1)
+        if (nextUserId && nextUserId !== authUserIdRef.current) {
           void loadProfile(nextUserId)
         }
       })
@@ -162,11 +150,11 @@ export default function Page() {
       isMounted = false
       authSubscription?.unsubscribe()
     }
-  }, [profileRefreshKey, router])
+  }, [router])
 
-  // Sync Documents live whenever authentication shifts
+  // 3. FIXED: Fetch active workspace records without triggering circular state cascades
   useEffect(() => {
-    if (!authed) {
+    if (!authed || !profileId) {
       setDocuments([])
       return
     }
@@ -197,7 +185,7 @@ export default function Page() {
     return () => {
       isMounted = false
     }
-  }, [authed, profileRefreshKey])
+  }, [authed, profileId]) // 👈 Dependency array tied tightly to unique profile initialization primitives
 
   const handleNavigate = (nextView: ViewKey) => {
     if (!authed) {
@@ -238,7 +226,6 @@ export default function Page() {
                     setAuthed(true)
                     setProfileRole(role)
                     setView(role === "faculty" ? "portal" : "studio")
-                    setProfileRefreshKey((current) => current + 1)
                   }}
                 />
               )}
@@ -255,7 +242,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Database Status Monitor Bar */}
+      {/* Database Monitor Debug Footer Block */}
       <section className="border-t border-border bg-muted/30 px-6 py-5 text-sm">
         <div className="mx-auto max-w-5xl space-y-3">
           <div>

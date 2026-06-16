@@ -1,192 +1,459 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Mic, MicOff, Radio, CircleDot, FileText, Lightbulb, Layers, CheckCircle2 } from "lucide-react"
+import { 
+  Mic, 
+  MicOff, 
+  Radio, 
+  CircleDot, 
+  FileText, 
+  Lightbulb, 
+  Layers, 
+  CheckCircle2, 
+  Sparkles, 
+  Highlighter, 
+  Send, 
+  Loader2,
+  X 
+} from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { conceptNodesCrud } from "@/lib/crud"
+
+type FeedbackItem = {
+  t: string
+  q: boolean
+  text: string
+}
 
 type Node = {
   id: string
+  owner_id: string
   x: number
   y: number
   label: string
-  type: "paper" | "prereq" | "gap"
+  node_type: "paper" | "prereq" | "gap"
+  viva_feedback?: FeedbackItem[]
 }
 
-const NODES: Node[] = [
-  { id: "core", x: 50, y: 48, label: "Federated Edge Latency", type: "paper" },
-  { id: "p1", x: 22, y: 22, label: "Adaptive Caching", type: "paper" },
-  { id: "p2", x: 80, y: 26, label: "QoS Benchmarks", type: "paper" },
-  { id: "pre1", x: 18, y: 70, label: "Network Theory", type: "prereq" },
-  { id: "pre2", x: 48, y: 82, label: "Distributed Systems", type: "prereq" },
-  { id: "gap1", x: 82, y: 70, label: "Research Gap: Energy ↔ Latency", type: "gap" },
-  { id: "gap2", x: 72, y: 50, label: "Research Gap: Privacy Cost", type: "gap" },
-]
-
-const EDGES: [string, string][] = [
+const STATIC_EDGES: [string, string][] = [
   ["core", "p1"],
   ["core", "p2"],
   ["core", "pre1"],
   ["core", "pre2"],
   ["core", "gap2"],
-  ["p2", "gap1"],
-  ["p1", "pre1"],
 ]
-
-const LOGS = [
-  { t: "00:12", q: true, text: "Define the dependent variable in your latency study." },
-  { t: "00:34", q: false, text: "Normalized round-trip latency, measured per inference request." },
-  { t: "01:05", q: true, text: "How did you control for device heterogeneity?" },
-  { t: "01:28", q: false, text: "Stratified sampling across three cohorts; confirmed via ANOVA." },
-]
-
-function nodeColor(type: Node["type"]) {
-  if (type === "paper") return { fill: "var(--color-primary)", text: "var(--color-primary-foreground)" }
-  if (type === "prereq") return { fill: "var(--color-accent)", text: "var(--color-accent-foreground)" }
-  return { fill: "var(--color-card)", text: "var(--color-foreground)" }
-}
 
 export function MethodologyGraph() {
+  const [nodes, setNodes] = useState<Node[]>([])
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [loading, setLoading] = useState(true)
   const [recording, setRecording] = useState(false)
+  
+  // Chat Studio state
+  const [messages, setMessages] = useState<{ id: string; text: string; isUser: boolean }[]>([
+    { id: "init", text: "Welcome to the Methodology Graph Workspace terminal. Select a concept node or interact below.", isUser: false }
+  ])
+  const [chatInput, setChatInput] = useState("")
+
+  // Scoring dialog modal state
+  const [showScoreModal, setShowScoreModal] = useState(false)
+  const [newQuestion, setNewQuestion] = useState("")
+  const [newAnswer, setNewAnswer] = useState("")
+  const [savingScore, setSavingScore] = useState(false)
+
+  useEffect(() => {
+    fetchGraphData()
+  }, [])
+
+  const fetchGraphData = async () => {
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const allRecords = await conceptNodesCrud.fetchAll() as any[]
+      // Filter cleanly by active owner execution context
+      const userNodes: Node[] = allRecords
+        .filter((item) => item.owner_id === user.id)
+        .map((item, idx) => ({
+          id: item.id,
+          owner_id: item.owner_id,
+          // Generate programmatic fallback coordinate projections if values aren't explicit
+          x: item.x ?? (idx * 22 % 60 + 20),
+          y: item.y ?? (idx * 18 % 50 + 25),
+          label: item.label || "Unnamed Concept Parameter",
+          node_type: item.node_type || "paper",
+          viva_feedback: item.viva_feedback || [
+            { t: "00:12", q: true, text: `Define your parameters regarding ${item.label || 'this architecture'}.` },
+            { t: "00:34", q: false, text: "Evaluation metrics met expected thresholds across all test cohorts." }
+          ]
+        }))
+
+      setNodes(userNodes)
+      if (userNodes.length > 0) {
+        // Keep active selection reference pinned dynamically if matching item ID is found
+        setSelectedNode((prev) => {
+          const fresh = userNodes.find((n) => n.id === prev?.id)
+          return fresh || userNodes[0]
+        })
+      }
+    } catch (err) {
+      console.error("Failed to compile methodology nodes:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!chatInput.trim()) return
+
+  const userMsg = { id: String(Date.now()), text: chatInput, isUser: true }
+  setMessages((prev) => [...prev, userMsg])
+  const promptSnapshot = chatInput
+  setChatInput("")
+
+  // Append a temporary loading bubble so the user knows it's thinking
+  const loadingId = "loading-placeholder"
+  setMessages((prev) => [...prev, { id: loadingId, text: "Consulting AI model engine...", isUser: false }])
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: promptSnapshot,
+        // Passes down whatever node the user clicked on as engineering context
+        formulaContext: selectedNode ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}` : "No specific node selected"
+      }),
+    })
+
+    const data = await response.json()
+
+    // Strip the loading bubble and insert the real answer returned by the AI route
+    setMessages((prev) => 
+      prev.filter((m) => m.id !== loadingId).concat({
+        id: String(Date.now()),
+        text: data.reply || "Command executed.",
+        isUser: false
+      })
+    )
+  } catch (err) {
+    setMessages((prev) => 
+      prev.filter((m) => m.id !== loadingId).concat({
+        id: String(Date.now()),
+        text: "Could not connect to the server edge pipeline.",
+        isUser: false
+      })
+    )
+  }
+}
+
+  const handleAddDefenseScore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedNode || !newQuestion.trim() || !newAnswer.trim()) return
+
+    setSavingScore(true)
+    try {
+      const currentLogs = selectedNode.viva_feedback || []
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      
+      const updatedLogs: FeedbackItem[] = [
+        ...currentLogs,
+        { t: timestamp, q: true, text: newQuestion },
+        { t: timestamp, q: false, text: newAnswer }
+      ]
+
+      await conceptNodesCrud.updateById(selectedNode.id, {
+        viva_feedback: updatedLogs
+      })
+
+      // Cleanly re-fetch state from upstream relational DB schema to sync graph live
+      await fetchGraphData()
+      
+      setNewQuestion("")
+      setNewAnswer("")
+      setShowScoreModal(false)
+    } catch (err) {
+      console.error("Error updating viva evaluation log entry matrix:", err)
+    } finally {
+      setSavingScore(false)
+    }
+  }
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_340px] lg:p-5">
-      {/* Canvas */}
-      <section className="relative min-h-[72vh] overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border p-3">
-          <div className="flex items-center gap-2">
-            <Layers className="size-4 text-primary" aria-hidden="true" />
-            <p className="text-sm font-semibold text-card-foreground">Relational Methodology Web</p>
+    <div className="space-y-4 p-4 lg:p-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+        
+        {/* LEFT CANVAS WORKSPACE AREA CONTAINER */}
+        <section className="relative min-h-[65vh] overflow-hidden rounded-xl border border-border bg-card flex flex-col">
+          <div className="flex items-center justify-between border-b border-border p-3">
+            <div className="flex items-center gap-2">
+              <Layers className="size-4 text-primary" aria-hidden="true" />
+              <p className="text-sm font-semibold text-card-foreground">Relational Methodology Web Canvas</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <Legend color="bg-primary" label="Paper Structure" />
+              <Legend color="bg-accent" label="Core Prerequisite" />
+              <Legend color="border-2 border-dashed border-accent bg-card" label="Identified Gap" />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <Legend color="bg-primary" label="Paper" />
-            <Legend color="bg-accent" label="Prerequisite" />
-            <Legend color="border-2 border-dashed border-accent bg-card" label="Research gap" />
+
+          <div className="relative flex-1 w-full bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px]">
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground gap-2">
+                <Loader2 className="size-4 animate-spin text-primary" /> Compiling live relational database nodes...
+              </div>
+            ) : nodes.length === 0 ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-muted-foreground text-xs">
+                <p className="font-semibold">No methodology concept nodes processed.</p>
+                <p className="max-w-xs mt-1 text-muted-foreground/70">Upload structural text assets to Document Interaction Studio to trigger model vector nodes.</p>
+              </div>
+            ) : (
+              <>
+                {/* Vector Connection Matrix Overlay */}
+                <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
+                  {STATIC_EDGES.map(([a, b], i) => {
+                    const na = nodes[i % nodes.length]
+                    const nb = nodes[(i + 1) % nodes.length]
+                    if (!na || !nb) return null
+                    return (
+                      <line
+                        key={i}
+                        x1={`${na.x}%`}
+                        y1={`${na.y}%`}
+                        x2={`${nb.x}%`}
+                        y2={`${nb.y}%`}
+                        stroke="var(--color-border)"
+                        strokeWidth={1.5}
+                        strokeDasharray={na.node_type === "gap" || nb.node_type === "gap" ? "4 4" : undefined}
+                      />
+                    )
+                  })}
+                </svg>
+
+                {/* Conceptual Nodes Map Array Render */}
+                {nodes.map((n) => {
+                  const isSelected = selectedNode?.id === n.id
+                  const Icon = n.node_type === "paper" ? FileText : n.node_type === "prereq" ? Layers : Lightbulb
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => setSelectedNode(n)}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95"
+                      style={{ left: `${n.x}%`, top: `${n.y}%`, zIndex: isSelected ? 30 : 10 }}
+                    >
+                      <div
+                        className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
+                          isSelected 
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105" 
+                            : "hover:scale-105"
+                        } ${
+                          n.node_type === "paper"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : n.node_type === "prereq"
+                              ? "bg-accent text-accent-foreground border-accent"
+                              : "border-2 border-dashed border-accent bg-card text-foreground"
+                        }`}
+                      >
+                        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="leading-tight text-left truncate max-w-[120px]">{n.label}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </>
+            )}
           </div>
-        </div>
+        </section>
 
-        <div className="relative h-[calc(72vh-3.25rem)] w-full bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px]">
-          {/* edges */}
-          <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
-            {EDGES.map(([a, b], i) => {
-              const na = NODES.find((n) => n.id === a)!
-              const nb = NODES.find((n) => n.id === b)!
-              return (
-                <line
-                  key={i}
-                  x1={`${na.x}%`}
-                  y1={`${na.y}%`}
-                  x2={`${nb.x}%`}
-                  y2={`${nb.y}%`}
-                  stroke="var(--color-border)"
-                  strokeWidth={2}
-                />
-              )
-            })}
-          </svg>
-
-          {/* nodes */}
-          {NODES.map((n) => {
-            const isGap = n.type === "gap"
-            const Icon = n.type === "paper" ? FileText : n.type === "prereq" ? Layers : Lightbulb
-            return (
-              <div
-                key={n.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${n.x}%`, top: `${n.y}%` }}
+        {/* RIGHT INTERACTIVE SOCRATIC SIDEBAR INTERACTIVE LOGGER FRAMEWORK */}
+        <section className="flex flex-col gap-4 min-h-[65vh]">
+          
+          {/* Viva Pod Module Panel */}
+          <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground">
+            <div className="flex items-center gap-2">
+              <Radio className="size-4 text-accent" aria-hidden="true" />
+              <p className="text-sm font-semibold">Socratic Audio · Viva Pod</p>
+            </div>
+            
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setRecording((r) => !r)}
+                className={`relative flex size-20 items-center justify-center rounded-full transition-all ${
+                  recording ? "bg-accent text-accent-foreground shadow-lg" : "bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20"
+                }`}
               >
-                <div
-                  className={`flex max-w-[170px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-sm transition-transform hover:scale-105 ${
-                    n.type === "paper"
-                      ? "bg-primary text-primary-foreground"
-                      : n.type === "prereq"
-                        ? "bg-accent text-accent-foreground"
-                        : "border-2 border-dashed border-accent bg-card text-foreground"
-                  }`}
-                >
-                  <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span className="leading-tight">{n.label}</span>
-                </div>
-                {isGap && (
-                  <span className="absolute -right-1 -top-1 flex size-3">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
-                    <span className="relative inline-flex size-3 rounded-full bg-accent" />
-                  </span>
+                {recording && (
+                  <span className="absolute inline-flex size-20 Skinner-ping animate-ping rounded-full bg-accent opacity-30" />
+                )}
+                {recording ? <Mic className="size-8" /> : <MicOff className="size-8" />}
+              </button>
+              
+              <div className="flex items-center gap-2 text-[11px] font-medium">
+                <CircleDot className={`size-3.5 ${recording ? "text-accent animate-pulse" : "text-primary-foreground/40"}`} />
+                {recording ? "Streaming Defense Audio · Live" : "Microphone Idle Context"}
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Oral Defense Evaluation Matrix Feed Log */}
+          <div className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/20">
+              <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-card-foreground truncate">Oral Defense Evaluation Log</p>
+                {selectedNode && (
+                  <p className="text-[11px] text-muted-foreground truncate">Selected Node: {selectedNode.label}</p>
                 )}
               </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* Socratic Audio (Viva Pod) */}
-      <section className="flex min-h-[72vh] flex-col gap-4">
-        <div className="rounded-xl border border-border bg-primary p-5 text-primary-foreground">
-          <div className="flex items-center gap-2">
-            <Radio className="size-4 text-accent" aria-hidden="true" />
-            <p className="text-sm font-semibold">Socratic Audio · Viva Pod</p>
-          </div>
-          <p className="mt-1 text-xs text-primary-foreground/70">Oral defense evaluation module</p>
-
-          <div className="mt-5 flex flex-col items-center gap-4">
-            <button
-              type="button"
-              onClick={() => setRecording((r) => !r)}
-              className={`relative flex size-24 items-center justify-center rounded-full transition-colors ${
-                recording ? "bg-accent text-accent-foreground" : "bg-primary-foreground/10 text-primary-foreground"
-              }`}
-              aria-pressed={recording}
-              aria-label={recording ? "Stop recording" : "Start recording"}
-            >
-              {recording && (
-                <span className="absolute inline-flex size-24 animate-ping rounded-full bg-accent opacity-30" />
+            </div>
+            
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[240px]">
+              {selectedNode?.viva_feedback && selectedNode.viva_feedback.length > 0 ? (
+                selectedNode.viva_feedback.map((l, i) => (
+                  <div key={i} className="flex gap-2.5 items-start">
+                    <span className="mt-1 font-mono text-[10px] text-muted-foreground shrink-0">{l.t}</span>
+                    <p
+                      className={`flex-1 rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                        l.q
+                          ? "bg-primary/10 font-medium text-primary border border-primary/10"
+                          : "border border-border bg-background text-foreground"
+                      }`}
+                    >
+                      {l.text}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-xs text-muted-foreground italic pt-8">Select an active concept vector to display associated evaluation logs.</p>
               )}
-              {recording ? <Mic className="size-9" /> : <MicOff className="size-9" />}
-            </button>
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <CircleDot className={`size-3.5 ${recording ? "text-accent" : "text-primary-foreground/40"}`} />
-              {recording ? "Listening · 01:42" : "Microphone idle"}
             </div>
-            {/* waveform */}
-            <div className="flex h-10 items-center gap-1">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <span
-                  key={i}
-                  className={`w-1 rounded-full ${recording ? "bg-accent" : "bg-primary-foreground/20"}`}
-                  style={{ height: `${recording ? 20 + Math.abs(Math.sin(i)) * 24 : 8}px` }}
-                />
-              ))}
+            
+            <div className="border-t border-border p-3 bg-muted/10">
+              <Button 
+                disabled={!selectedNode} 
+                onClick={() => setShowScoreModal(true)}
+                className="w-full text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Score Defense Response
+              </Button>
             </div>
           </div>
+        </section>
+      </div>
+
+      {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK */}
+      <section className="flex flex-col rounded-xl border border-border bg-card min-h-[280px]">
+        <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30">
+          <Sparkles className="size-4 text-primary" aria-hidden="true" />
+          <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio Terminal</p>
         </div>
 
-        <div className="flex flex-1 flex-col rounded-xl border border-border bg-card">
-          <div className="flex items-center gap-2 border-b border-border p-3">
-            <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
-            <p className="text-sm font-semibold text-card-foreground">Oral Defense Evaluation Log</p>
-          </div>
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {LOGS.map((l, i) => (
-              <div key={i} className="flex gap-3">
-                <span className="mt-0.5 font-mono text-[11px] text-muted-foreground">{l.t}</span>
-                <p
-                  className={`flex-1 rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                    l.q
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "border border-border bg-background text-foreground"
-                  }`}
-                >
-                  {l.text}
-                </p>
+        <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[180px]">
+          {messages.map((m) => (
+            <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
+                  m.isUser
+                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                    : "border border-border bg-background text-foreground rounded-tl-sm shadow-sm"
+                }`}
+              >
+                {m.text}
               </div>
-            ))}
-          </div>
-          <div className="border-t border-border p-3">
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-              Score Defense Response
-            </Button>
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-border p-3 bg-background">
+          <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="Query methodology schema vectors or write an analytics constraint rule parameter..."
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+          />
+          <Button type="submit" size="icon" className="size-8 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Send className="size-3.5" />
+          </Button>
+        </form>
+      </section>
+
+      {/* INTERACTIVE LOCAL DIALOG MODAL BOX TRIGGER */}
+      {showScoreModal && selectedNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold text-foreground truncate">Score Defense Response</h4>
+                <p className="text-xs text-muted-foreground truncate">Node Matrix: {selectedNode.label}</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowScoreModal(false)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddDefenseScore} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                  Socratic Query Statement
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="e.g., How does this parameter affect network topology?"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                  Candidate Oral Response Evaluation
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newAnswer}
+                  onChange={(e) => setNewAnswer(e.target.value)}
+                  placeholder="Input analyzed student response and graded remarks here..."
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs outline-none focus:border-primary resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowScoreModal(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  size="sm"
+                  disabled={savingScore}
+                  className="text-xs bg-primary text-primary-foreground hover:bg-primary/90 gap-1"
+                >
+                  {savingScore && <Loader2 className="size-3 animate-spin" />}
+                  Commit Entry
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
-      </section>
+      )}
     </div>
   )
 }
@@ -194,7 +461,7 @@ export function MethodologyGraph() {
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5 text-muted-foreground">
-      <span className={`size-3 rounded ${color}`} />
+      <span className={`size-2.5 rounded-sm ${color}`} />
       {label}
     </span>
   )

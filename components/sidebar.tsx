@@ -2,7 +2,6 @@
 
 import {
   GraduationCap,
-  ShieldCheck,
   FileText,
   Workflow,
   ClipboardList,
@@ -19,7 +18,6 @@ const NAV: {
   icon: typeof FileText
   requiresAuth: boolean
 }[] = [
-  { key: "access", label: "Universal Access Gate", sub: "Authentication", icon: ShieldCheck, requiresAuth: false },
   { key: "studio", label: "Document Interaction Studio", sub: "Read & analyze", icon: FileText, requiresAuth: true },
   { key: "graph", label: "Methodology Graph Workspace", sub: "Knowledge map", icon: Workflow, requiresAuth: true },
   { key: "portal", label: "Teacher Evaluation Portal", sub: "Analytics", icon: ClipboardList, requiresAuth: true },
@@ -40,9 +38,10 @@ export function Sidebar({
   name?: string | null
   role?: string | null
 }) {
+  // Filters out access elements and strictly distributes view paths based on authorization credentials
   const visibleNav = authed
     ? NAV.filter((item) => (canAccessPortal ? item.key === "portal" : item.key !== "portal"))
-    : NAV.filter((item) => item.key === "access")
+    : []
 
   // Helper logic to cleanly extract double initials from names dynamically
   const getInitials = (fullName: string | null | undefined) => {
@@ -109,7 +108,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* FIXED: Dynamic Profile Identifier Interface */}
+      {/* Dynamic Profile Identifier Interface */}
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
