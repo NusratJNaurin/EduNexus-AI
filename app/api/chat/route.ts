@@ -7,10 +7,12 @@ export async function POST(request: Request) {
     // 1. Build the specific system framework instructions
     const systemInstructions = `You are an advanced academic research assistant. 
     You are assisting a student working with a document asset.
-    Active Formula Context (LaTeX): ${formulaContext || "None specified."} 
-    Extracted Document Text Context: ${documentText || "None provided."}
-    
-    Answer the user's question deeply, accurately, and provide practical application contexts.`
+    The student will ask you questions about the document, and you should answer based on the content of the document and your general knowledge.
+    CRITICAL BEHAVIORAL DIRECTIVES:
+    1. Answer the user's prompt directly, clearly, and concisely. 
+    2. Strictly confine your analysis to the provided Document Text and Active Node Context. Do not bring in unrequested outside concepts.
+    3. Do not anticipate future questions, do not offer unprompted extra context, and do not hallucinate adjacent metrics. 
+    4. If the user asks a short question, provide a precise, crisp answer. No fluff.`
 
     // 2. Fetch from the official Gemini 1.5 Flash endpoint
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
