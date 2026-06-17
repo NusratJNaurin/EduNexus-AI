@@ -26,6 +26,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud } from "@/lib/crud"
 
+// Localized structural type declarations
 type FeedbackItem = {
   t: string
   q: boolean
@@ -42,6 +43,11 @@ type Node = {
   viva_feedback?: FeedbackItem[]
 }
 
+type DocumentRow = {
+  id: string
+  title: string
+}
+
 const STATIC_EDGES: [string, string][] = [
   ["core", "p1"],
   ["core", "p2"],
@@ -54,6 +60,8 @@ export function MethodologyGraph() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [loading, setLoading] = useState(true)
+  const [documents, setDocuments] = useState<DocumentRow[]>([])
+  const [activeDoc, setActiveDoc] = useState<DocumentRow | null>(null)
   
   // Audio Streaming Pipeline References & State
   const [recording, setRecording] = useState(false)
@@ -65,6 +73,9 @@ export function MethodologyGraph() {
     { id: "init", text: "Welcome to the Methodology Graph Workspace terminal. Select a concept node or interact below.", isUser: false }
   ])
   const [chatInput, setChatInput] = useState("")
+
+  // Missing local states for streaming triggers
+  const [sendingChat, setSendingChat] = useState(false)
 
   // Scoring dialog modal state
   const [showScoreModal, setShowScoreModal] = useState(false)
@@ -241,6 +252,36 @@ export function MethodologyGraph() {
     }
   }
 
+  // Simulation prompt stream trigger inside the canvas context
+  const executeChatStream = async (customPrompt: string) => {
+    setSendingChat(true)
+    const placeholderId = String(Date.now())
+    setMessages((prev) => [...prev, { id: placeholderId, text: "Streaming engine prompts...", isUser: false }])
+    
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: customPrompt,
+          formulaContext: selectedNode ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}` : "No specific node selected"
+        })
+      })
+      const data = await response.json()
+      setMessages((prev) => 
+        prev.filter((m) => m.id !== placeholderId).concat({
+          id: String(Date.now()),
+          text: data.reply || "Socratic nodes updated successfully.",
+          isUser: false
+        })
+      )
+    } catch (err) {
+      console.error("Failed to execute graph-targeted chat stream:", err)
+    } finally {
+      setSendingChat(false)
+    }
+  }
+
   const handleAddDefenseScore = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedNode || !newQuestion.trim() || !newAnswer.trim()) return
@@ -397,75 +438,72 @@ export function MethodologyGraph() {
               </div>
             </div>
 
-            {/* Interactive Oral Defense Evaluation Matrix Feed Log */}
-            <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[240px]">
-              {selectedNode?.viva_feedback && selectedNode.viva_feedback.length > 0 ? (
-                selectedNode.viva_feedback.map((l, i) => {
-                  // Create a completely unique composite key using index and type indicator
-                  const uniqueKey = `${l.t}-${l.q ? 'query' : 'answer'}-${i}`;
-                  
-                  return (
-                    <div key={uniqueKey} className="flex gap-2.5 items-start animate-fade-in">
-                      <span className="mt-1 font-mono text-[10px] text-muted-foreground shrink-0">
-                        {l.t}
-                      </span>
-                      <p
-                        className={`flex-1 rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                          l.q
-                            ? "bg-primary/10 font-medium text-primary border border-primary/10"
-                            : "border border-border bg-background text-foreground shadow-xs"
-                        }`}
-                      >
-                        {l.text || <span className="text-muted-foreground italic">Empty record data structure</span>}
-                      </p>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground italic h-full justify-center pt-12">
-                  <p className="text-xs">No defense evaluation items logged for this node.</p>
+            {/* Integrated Live Viva Simulation Pod */}
+            {activeDoc && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Viva Board Simulation Engine
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Generates real-time defense prompts</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={sendingChat}
+                    onClick={() => executeChatStream("Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions regarding the methodology, mathematical bounds, and computational assumptions present in this document context.")}
+                    className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
+                  >
+                    <Sparkles className="size-3.5 text-emerald-500" />
+                    Generate Defense Set
+                  </Button>
                 </div>
-              )}
+                <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/50">
+                  <span className="font-semibold text-foreground">How it works:</span> Click the button above to fire examiner defense lines straight into your workspace panel below.
+                </div>
+              </div>
+            )}
+
+            {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK */}
+            <div className="flex flex-col rounded-xl border border-border bg-card flex-1 min-h-[280px]">
+              <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30">
+                <Sparkles className="size-4 text-primary" aria-hidden="true" />
+                <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio Terminal</p>
+              </div>
+
+              <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[180px]">
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
+                        m.isUser
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "border border-border bg-background text-foreground rounded-tl-sm shadow-sm"
+                      }`}
+                    >
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-border p-3 bg-background mt-auto">
+                <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Query methodology schema vectors or write an analytics constraint rule parameter..."
+                  className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                />
+                <Button type="submit" size="icon" className="size-8 bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Send className="size-3.5" />
+                </Button>
+              </form>
             </div>
           </section>
         </div>
-
-        {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK */}
-        <section className="flex flex-col rounded-xl border border-border bg-card min-h-[280px]">
-          <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30">
-            <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio Terminal</p>
-          </div>
-
-          <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[180px]">
-            {messages.map((m) => (
-              <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
-                    m.isUser
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "border border-border bg-background text-foreground rounded-tl-sm shadow-sm"
-                  }`}
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-border p-3 bg-background">
-            <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
-            <input
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Query methodology schema vectors or write an analytics constraint rule parameter..."
-              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-            />
-            <Button type="submit" size="icon" className="size-8 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Send className="size-3.5" />
-            </Button>
-          </form>
-        </section>
 
         {/* INTERACTIVE DIALOG MODAL BOX WITH DYNAMIC INFO TOOLTIPS */}
         {showScoreModal && selectedNode && (

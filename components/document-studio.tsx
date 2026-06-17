@@ -352,34 +352,6 @@ export function DocumentStudio() {
           )}
         </div>
 
-        {/* Integrated Live Viva Simulation Pod */}
-        {activeDoc && (
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Viva Board Simulation Engine
-                </h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Generates real-time defense prompts</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={sendingChat}
-                onClick={() => executeChatStream("Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions regarding the methodology, mathematical bounds, and computational assumptions present in this document context.")}
-                className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
-              >
-                <Sparkles className="size-3.5 text-emerald-500" />
-                Generate Defense Set
-              </Button>
-            </div>
-            <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/50">
-              <span className="font-semibold text-foreground">How it works:</span> Click the button above to fire examiner defense lines straight into your workspace panel below.
-            </div>
-          </div>
-        )}
-
         {/* Source-Grounded Interaction Chat Studio */}
         <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
