@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     Answer the user's question deeply, accurately, and provide practical application contexts.`
 
     // 2. Fetch from the official Gemini 1.5 Flash endpoint
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
 
     const response = await fetch(url, {
       method: "POST",

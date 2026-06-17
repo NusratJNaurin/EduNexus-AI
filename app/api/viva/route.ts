@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     
     You MUST respond strictly with a valid JSON block containing exactly two fields: "transcription" and "evaluation". Do not include markdown code fence formatting blocks around the JSON object.`
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
 
     const response = await fetch(url, {
       method: "POST",
