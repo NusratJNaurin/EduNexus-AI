@@ -4,44 +4,28 @@ export async function POST(request: Request) {
   try {
     const { prompt, formulaContext, documentText } = await request.json()
 
-    const systemInstructions = `
-      You are an advanced academic research assistant.
-      The student is interacting with an asset that contains the following LaTeX formula:
-      ${formulaContext || "No explicit formula selected"}
+    const systemInstructions = `You are an advanced academic research assistant. 
+    Formula: ${formulaContext || "None"} 
+    Context: ${documentText || "None"}`
 
-      Additional document text stream context:
-      ${documentText || "No extra text context provided"}
+    // Gemini API Free Endpoint
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
 
-      Answer the user's question accurately, deeply, and provide real-life application contexts where applicable.
-    `
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // Hidden securely on Vercel
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o", 
-        messages: [
-          { role: "system", content: systemInstructions },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.4,
-      }),
+        contents: [{ 
+          parts: [{ text: `${systemInstructions}\n\nUser Question: ${prompt}` }] 
+        }]
+      })
     })
 
-    const aiData = await response.json()
-    
-    if (!response.ok) {
-      throw new Error(aiData.error?.message || "AI Engine error")
-    }
+    const data = await response.json()
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received."
 
-    const replyText = aiData.choices[0].message.content
     return NextResponse.json({ reply: replyText })
-
   } catch (error: any) {
-    console.error("API Route Error:", error)
-    return NextResponse.json({ error: error.message || "Pipeline failure" }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
