@@ -54,17 +54,40 @@ export function DocumentStudio() {
   const [errorMsg, setErrorMsg] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [chatInput, setChatInput] = useState("")
-  
-  // Interactive Chat Studio States
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [sendingChat, setSendingChat] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Deduplicated State: Combined local storage hydration into one primary declaration
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== "undefined" && activeDoc?.id) {
+      const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
+      return saved ? JSON.parse(saved) : []
+    }
+    return []
+  })
 
   // 1. Fetch User Documents on Mount
   useEffect(() => {
     loadUserDocuments()
   }, [])
+
+  // 2. Automatically load history whenever the active document changes
+  useEffect(() => {
+    if (activeDoc?.id) {
+      const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
+      setMessages(saved ? JSON.parse(saved) : [])
+    } else {
+      setMessages([])
+    }
+  }, [activeDoc?.id])
+
+  // 3. Automatically save messages to localStorage whenever a message is appended
+  useEffect(() => {
+    if (activeDoc?.id) {
+      localStorage.setItem(`chat_history_${activeDoc.id}`, JSON.stringify(messages))
+    }
+  }, [messages, activeDoc?.id])
 
   const loadUserDocuments = async () => {
     setLoadingDocs(true)
@@ -83,7 +106,6 @@ export function DocumentStudio() {
     }
   }
 
-  // 2. Handle File Selection & Storage Bucket Uploading
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -92,15 +114,12 @@ export function DocumentStudio() {
     setErrorMsg("")
 
     try {
-      // A. Verify user is fully authenticated
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error("Authentication context not found. Please log in again.")
 
-      // B. Create a unique path inside your 'documents' bucket
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
       const uniquePath = `${user.id}/${Date.now()}_${cleanFileName}`
 
-      // C. Push binary payload to your storage bucket
       const { data: storageData, error: storageError } = await supabase.storage
         .from("documents")
         .upload(uniquePath, file, {
@@ -110,13 +129,12 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
-      // D. Write corresponding descriptor row to 'public.research_documents'
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""), // Strip extension for clean title handling
+        title: file.name.replace(/\.[^/.]+$/, ""), 
         file_name: file.name,
         file_size_bytes: file.size,
-        page_count: Math.floor(Math.random() * 15) + 5, // Mock extraction metric
+        page_count: Math.floor(Math.random() * 15) + 5, 
         extracted_text: `Extracted content stream for ${file.name}: We investigate academic variables matching Qatar University computational structures. Statistical significance was confirmed across testing cohorts (p < 0.01).`,
         keywords: ["Academic", "QU Research", "Dataset Analysis"],
         readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
@@ -131,7 +149,6 @@ export function DocumentStudio() {
         label: insertedRow.title,
       })
 
-      // E. Re-sync state UI cleanly
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
     } catch (err: any) {
@@ -139,11 +156,10 @@ export function DocumentStudio() {
       setErrorMsg(err.message || "An unexpected error occurred during document integration.")
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = "" // Clear input buffer
+      if (fileInputRef.current) fileInputRef.current.value = "" 
     }
   }
 
-  // 3. Centralized AI Streaming Dispatcher Action
   const executeChatStream = async (promptText: string) => {
     if (!activeDoc || sendingChat) return
 
@@ -196,7 +212,6 @@ export function DocumentStudio() {
     executeChatStream(prompt)
   }
 
-  // Filter list based on keyword search query match
   const filteredDocs = documents.filter(doc => 
     doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     doc.file_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -252,7 +267,6 @@ export function DocumentStudio() {
           </div>
         )}
 
-        {/* Live Storage Bucket Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto border-b border-border bg-muted/40 p-2">
           {loadingDocs ? (
             <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
@@ -279,7 +293,6 @@ export function DocumentStudio() {
           )}
         </div>
 
-        {/* Dynamic Display Area */}
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {activeDoc ? (
             <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
@@ -307,16 +320,15 @@ export function DocumentStudio() {
 
       {/* RIGHT: Dynamic Matrix Framework + Formula + Prompt Terminal */}
       <section className="flex min-h-[70vh] flex-col gap-4">
-        {/* Metric matrix dynamically fed by database rows */}
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="mb-3 text-sm font-semibold text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-3">
             {[
-              ["File Size", activeDoc?.file_size_bytes ? `${(activeDoc.file_size_bytes / 1024).toFixed(1)} KB` : "—"],
+              ["File Size", activeDoc?.file_size_bytes != null ? `${(activeDoc.file_size_bytes / 1024).toFixed(1)} KB` : "—"],
               ["Confidence Level", activeDoc ? "p < 0.01" : "—"],
-              ["Readability Score", activeDoc?.readability_score ? `${activeDoc.readability_score}%` : "—"],
-              ["Estimated Pages", activeDoc?.page_count ? `n = ${activeDoc.page_count}` : "—"],
-              ["Complexity Tier", activeDoc?.complexity_score ? `${activeDoc.complexity_score}%` : "—"],
+              ["Readability Score", activeDoc?.readability_score != null ? `${activeDoc.readability_score}%` : "—"],
+              ["Estimated Pages", activeDoc?.page_count != null ? `n = ${activeDoc.page_count}` : "—"],
+              ["Complexity Tier", activeDoc?.complexity_score != null ? `${activeDoc.complexity_score}%` : "—"],
               ["Keywords Found", activeDoc?.keywords ? String(activeDoc.keywords.length) : "—"],
             ].map(([l, v]) => (
               <div key={l} className="rounded-lg border border-border bg-background p-3">
@@ -327,7 +339,6 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* Dynamic LaTeX Formula Rendering */}
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="mb-2 text-sm font-semibold text-card-foreground">Methodology Formula Architecture</p>
           {activeDoc?.methodology_latex ? (
@@ -341,15 +352,57 @@ export function DocumentStudio() {
           )}
         </div>
 
+        {/* Integrated Live Viva Simulation Pod */}
+        {activeDoc && (
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Viva Board Simulation Engine
+                </h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Generates real-time defense prompts</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={sendingChat}
+                onClick={() => executeChatStream("Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions regarding the methodology, mathematical bounds, and computational assumptions present in this document context.")}
+                className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
+              >
+                <Sparkles className="size-3.5 text-emerald-500" />
+                Generate Defense Set
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/50">
+              <span className="font-semibold text-foreground">How it works:</span> Click the button above to fire examiner defense lines straight into your workspace panel below.
+            </div>
+          </div>
+        )}
+
         {/* Source-Grounded Interaction Chat Studio */}
         <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/20">
-            <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio</p>
+          <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" aria-hidden="true" />
+              <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio</p>
+            </div>
+            {messages.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setMessages([])
+                  if (activeDoc?.id) localStorage.removeItem(`chat_history_${activeDoc.id}`)
+                }}
+                className="text-[11px] h-6 px-2 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Clear Thread
+              </Button>
+            )}
           </div>
 
-          {/* Scrollable Message History Area */}
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[260px]">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[280px]">
             {activeDoc ? (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
@@ -363,10 +416,43 @@ export function DocumentStudio() {
                       className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                         m.isUser
                           ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "border border-border bg-background text-foreground rounded-tl-sm whitespace-pre-wrap"
+                          : "border border-border bg-background text-foreground rounded-tl-sm"
                       }`}
                     >
-                      {m.text}
+                      {m.isUser ? (
+                        m.text
+                      ) : (
+                        <div className="space-y-2 text-foreground">
+                          {m.text.split("\n").map((line, lineIndex) => {
+                            let content = line.trim()
+                            if (!content) return <div key={lineIndex} className="h-2" />
+
+                            if (content.startsWith("###")) {
+                              return (
+                                <h4 key={lineIndex} className="text-sm font-bold text-foreground mt-2 mb-1">
+                                  {content.replace(/^###\s*/, "")}
+                                </h4>
+                              )
+                            }
+
+                            const boldSegments = line.split(/(\*\*.*?\*\*)/g)
+                            return (
+                              <p key={lineIndex} className="text-xs md:text-sm">
+                                {boldSegments.map((seg, segIndex) => {
+                                  if (seg.startsWith("**") && seg.endsWith("**")) {
+                                    return (
+                                      <strong key={segIndex} className="font-semibold text-primary">
+                                        {seg.slice(2, -2)}
+                                      </strong>
+                                    )
+                                  }
+                                  return <span key={segIndex}>{seg}</span>
+                                })}
+                              </p>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -384,12 +470,8 @@ export function DocumentStudio() {
             )}
           </div>
 
-          {/* Integrated Dynamic Analysis Chips Container */}
           {activeDoc && (
             <div className="px-3 py-2.5 bg-muted/20 border-t border-border/60">
-              <p className="text-[11px] font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                <Sparkles className="size-3 text-primary" /> Document Analysis Engines:
-              </p>
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
@@ -419,10 +501,6 @@ export function DocumentStudio() {
             </div>
           )}
 
-          {/* Open-Ended Message Form Bar */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background"></form>
-
-          {/* Open-Ended Message Form Bar */}
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background">
             <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
             <input

@@ -10,7 +10,6 @@ import {
   FileText, 
   Lightbulb, 
   Layers, 
-  CheckCircle2, 
   Sparkles, 
   Highlighter, 
   Send, 
