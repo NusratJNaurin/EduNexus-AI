@@ -399,50 +399,34 @@ export function MethodologyGraph() {
             </div>
 
             {/* Interactive Oral Defense Evaluation Matrix Feed Log */}
-            <div className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/20">
-                <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-card-foreground truncate">Oral Defense Evaluation Log</p>
-                  {selectedNode && (
-                    <p className="text-[11px] text-muted-foreground truncate">Selected Node: {selectedNode.label}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[240px]">
-                {selectedNode?.viva_feedback && selectedNode.viva_feedback.length > 0 ? (
-                  selectedNode.viva_feedback.map((l, i) => (
-                    <div key={i} className="flex gap-2.5 items-start">
-                      <span className="mt-1 font-mono text-[10px] text-muted-foreground shrink-0">{l.t}</span>
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[240px]">
+              {selectedNode?.viva_feedback && selectedNode.viva_feedback.length > 0 ? (
+                selectedNode.viva_feedback.map((l, i) => {
+                  // Create a completely unique composite key using index and type indicator
+                  const uniqueKey = `${l.t}-${l.q ? 'query' : 'answer'}-${i}`;
+                  
+                  return (
+                    <div key={uniqueKey} className="flex gap-2.5 items-start animate-fade-in">
+                      <span className="mt-1 font-mono text-[10px] text-muted-foreground shrink-0">
+                        {l.t}
+                      </span>
                       <p
                         className={`flex-1 rounded-xl px-3 py-2 text-xs leading-relaxed ${
                           l.q
                             ? "bg-primary/10 font-medium text-primary border border-primary/10"
-                            : "border border-border bg-background text-foreground"
+                            : "border border-border bg-background text-foreground shadow-xs"
                         }`}
                       >
-                        {l.text}
+                        {l.text || <span className="text-muted-foreground italic">Empty record data structure</span>}
                       </p>
                     </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground italic h-full justify-center pt-12">
-                    <p className="text-xs">No defense evaluation items logged for this node.</p>
-                    <p className="text-[10px] text-muted-foreground/60 not-italic mt-0.5">Click the trigger below to commit grading annotations metrics manually.</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border-t border-border p-3 bg-muted/10">
-                <Button 
-                  disabled={!selectedNode} 
-                  onClick={() => setShowScoreModal(true)}
-                  className="w-full text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Score Defense Response
-                </Button>
-              </div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground italic h-full justify-center pt-12">
+                  <p className="text-xs">No defense evaluation items logged for this node.</p>
+                </div>
+              )}
             </div>
           </section>
         </div>
