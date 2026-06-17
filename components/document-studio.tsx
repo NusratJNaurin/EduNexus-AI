@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
-import "katex/dist/katex.min.css"
+import "katex/dist/katex.min.css" 
 
 type DocumentRow = {
   id: string
@@ -65,26 +65,6 @@ export function DocumentStudio() {
   useEffect(() => {
     loadUserDocuments()
   }, [])
-
-  // Initialize base message context when active document toggles
-  useEffect(() => {
-    if (activeDoc) {
-      setMessages([
-        {
-          id: "init",
-          text: `Synthesize the main methodology parameters within "${activeDoc.title}".`,
-          isUser: true
-        },
-        {
-          id: "init-reply",
-          text: `Based directly on the text extracted from the document metadata, the model uses a core relational structure modeled as:\n\n${activeDoc.methodology_latex || "No formula declared"}\n\nKeywords cross-referenced include: ${activeDoc.keywords?.join(", ") || "None"}.`,
-          isUser: false
-        }
-      ])
-    } else {
-      setMessages([])
-    }
-  }, [activeDoc])
 
   const loadUserDocuments = async () => {
     setLoadingDocs(true)
@@ -163,18 +143,14 @@ export function DocumentStudio() {
     }
   }
 
-  // 3. Wired Asynchronous Input & Mock Streaming Response Form Submittal Handler
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const prompt = chatInput.trim()
-    if (!prompt || !activeDoc || sendingChat) return
+  // 3. Centralized AI Streaming Dispatcher Action
+  const executeChatStream = async (promptText: string) => {
+    if (!activeDoc || sendingChat) return
 
-    setChatInput("")
     setSendingChat(true)
-
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
-      text: prompt,
+      text: promptText,
       isUser: true
     }
     setMessages((prev) => [...prev, userMsg])
@@ -184,17 +160,14 @@ export function DocumentStudio() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt,
+          prompt: promptText,
           formulaContext: activeDoc.methodology_latex || "",
           documentText: activeDoc.extracted_text || ""
         })
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to get reply.")
-      }
+      if (!response.ok) throw new Error(data.error || "Failed to get reply.")
 
       const realReply: ChatMessage = {
         id: `reply-${Date.now()}`,
@@ -213,6 +186,14 @@ export function DocumentStudio() {
     } finally {
       setSendingChat(false)
     }
+  }
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const prompt = chatInput.trim()
+    if (!prompt) return
+    setChatInput("")
+    executeChatStream(prompt)
   }
 
   // Filter list based on keyword search query match
@@ -361,13 +342,14 @@ export function DocumentStudio() {
         </div>
 
         {/* Source-Grounded Interaction Chat Studio */}
-        <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card">
+        <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/20">
             <Sparkles className="size-4 text-primary" aria-hidden="true" />
             <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio</p>
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[280px]">
+          {/* Scrollable Message History Area */}
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[260px]">
             {activeDoc ? (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
@@ -402,6 +384,45 @@ export function DocumentStudio() {
             )}
           </div>
 
+          {/* Integrated Dynamic Analysis Chips Container */}
+          {activeDoc && (
+            <div className="px-3 py-2.5 bg-muted/20 border-t border-border/60">
+              <p className="text-[11px] font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Sparkles className="size-3 text-primary" /> Document Analysis Engines:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  disabled={sendingChat}
+                  onClick={() => executeChatStream("Scan the uploaded research document text and extract the core methodology parameters, prerequisites, and literature gaps as structured data points.")}
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  Extract Methodology Nodes
+                </button>
+                <button
+                  type="button"
+                  disabled={sendingChat}
+                  onClick={() => executeChatStream("Isolate and evaluate all explicit limitations, experimental constraints, and future work vectors outlined by the authors in this paper.")}
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  Summarize Limitations & Scope
+                </button>
+                <button
+                  type="button"
+                  disabled={sendingChat}
+                  onClick={() => executeChatStream("Cross-reference the central claims or technical figures in this document to evaluate if they have direct, verifiable evidence inside the text.")}
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  Verify Evidence Matrix
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Open-Ended Message Form Bar */}
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background"></form>
+
+          {/* Open-Ended Message Form Bar */}
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background">
             <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
