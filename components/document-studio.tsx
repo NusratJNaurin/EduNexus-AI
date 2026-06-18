@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
 import "katex/dist/katex.min.css" 
+import { PdfVisualViewer } from "./PdfVisualViewer"
 
 type DocumentRow = {
   id: string
@@ -432,7 +433,7 @@ export function DocumentStudio() {
               </div>
 
               {/* Raw extracted stream container */}
-              <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
+              {/* <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Raw Content Stream · Page Cache Matrix
                 </p>
@@ -441,8 +442,22 @@ export function DocumentStudio() {
                 </h3>
                 <div className="space-y-3 text-xs md:text-sm leading-relaxed text-muted-foreground/90 border-t border-border/40 pt-3 max-h-[300px] overflow-y-auto">
                   <p className="whitespace-pre-wrap font-sans">
-                    {documentText || "No structural text was processed from this asset."}
+                    { documentText || "No structural text was processed from this asset."}
                   </p>
+                </div>
+              </div> */}
+
+              <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Visual Render Sandbox · Canvas Document Framework
+                </p>
+                <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
+                  {activeDoc.title}
+                </h3>
+                
+                <div className="border-t border-border/40 pt-3">
+                  {/* Visual PDF Viewer replaces the old text block wrapper */}
+                  <PdfVisualViewer fileUrl={activeDoc.file_url} />
                 </div>
               </div>
 
