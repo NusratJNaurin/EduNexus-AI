@@ -61,6 +61,10 @@ export function DocumentStudio() {
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
   const [documentText, setDocumentText] = useState<string>("")
+  
+  // NEW: Concise Summary state management hooks
+  const [documentSummary, setDocumentSummary] = useState<string>("")
+  const [loadingSummary, setLoadingSummary] = useState<boolean>(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -76,13 +80,43 @@ export function DocumentStudio() {
     loadUserDocuments()
   }, [])
 
+  // NEW: Async worker to pull domain-agnostic summaries from your /api/summarize route
+  const fetchDocumentSummary = async (text: string, fileName: string) => {
+    if (!text) {
+      setDocumentSummary("")
+      return
+    }
+    setLoadingSummary(true)
+    try {
+      const response = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, fileName }),
+      })
+      const data = await response.json()
+      setDocumentSummary(data.summary || "No summary available.")
+    } catch (err) {
+      console.error("Failed to fetch concise summary:", err)
+      setDocumentSummary("Unable to parse a dynamic summary for this asset.")
+    } finally {
+      setLoadingSummary(false)
+    }
+  }
+
+  // UPDATED: Fires summary generation seamlessly when swapping active documentation items
   useEffect(() => {
     if (activeDoc) {
-      setDocumentText(activeDoc.extracted_text || "")
+      const textContent = activeDoc.extracted_text || ""
+      setDocumentText(textContent)
+      
+      // Fetch summary when document changes
+      fetchDocumentSummary(textContent, activeDoc.file_name || activeDoc.title || "document.pdf")
+      
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
       setMessages(saved ? JSON.parse(saved) : [])
     } else {
       setDocumentText("")
+      setDocumentSummary("")
       setMessages([])
     }
   }, [activeDoc?.id])
@@ -110,9 +144,8 @@ export function DocumentStudio() {
     }
   }
 
-  // UPDATED: Dynamic CRUD Rename Handler Integration
   const handleRenameDoc = async (e: React.MouseEvent, docId: string, currentTitle: string) => {
-    e.stopPropagation() // Prevent selecting document row accidently
+    e.stopPropagation() 
     const updatedName = prompt("Enter new structural name parameters for this document:", currentTitle)
     if (!updatedName || updatedName.trim() === currentTitle) return
 
@@ -127,9 +160,8 @@ export function DocumentStudio() {
     }
   }
 
-  // UPDATED: Dynamic CRUD Delete Handler Integration
   const handleDeleteDoc = async (e: React.MouseEvent, docId: string) => {
-    e.stopPropagation() // Prevent selecting document row accidently
+    e.stopPropagation() 
     if (!confirm("Are you certain you want to purge this document row out of your core schema environment?")) return
 
     setIsActionLoading(docId)
@@ -188,10 +220,10 @@ export function DocumentStudio() {
         file_size_bytes: file.size,
         page_count: file.type === "application/pdf" ? undefined : 1, 
         extracted_text: realExtractedText,
-        keywords: ["Academic", "Physics Notation", "Dataset Analysis"],
+        keywords: ["Academic", "Multi-Disciplinary", "Core Reference Matrix"],
         readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
         complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
-        methodology_latex: "v = v_0 + at",
+        methodology_latex: "E = mc^2",
       }) as DocumentRow
 
       await conceptNodesCrud.insertRecord({
@@ -320,7 +352,6 @@ export function DocumentStudio() {
           </div>
         )}
 
-        {/* RECONFIGURED: Horizontal Tab bar translated into a Native Document Checklist Tree Frame */}
         <div className="border-b border-border bg-muted/20">
           <div className="px-4 pt-3 pb-1">
             <h4 className="text-xs font-bold text-foreground tracking-wide">Documents</h4>
@@ -351,7 +382,6 @@ export function DocumentStudio() {
                       <span className="truncate">{doc.title || doc.file_name}</span>
                     </div>
 
-                    {/* Dynamic Action Controls Matrix shown on layout list element row hover */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
                         type="button"
@@ -380,20 +410,42 @@ export function DocumentStudio() {
           </div>
         </div>
 
+        {/* UPDATED: Accommodates both Concise Summarizer state logic and the explicit document layout */}
         <div className="flex-1 space-y-4 overflow-y-auto p-5 bg-background">
           {activeDoc ? (
-            <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Extracted Text Stream · Page Cache Matrix
-              </p>
-              <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
-                {activeDoc.title}
-              </h3>
-              <div className="space-y-3 text-xs md:text-sm leading-relaxed text-muted-foreground/90 border-t border-border/40 pt-3">
-                <p className="whitespace-pre-wrap font-sans">
-                  {documentText || "No structural text was processed from this asset."}
+            <div className="space-y-4">
+              
+              {/* NEW REFACTOR: Dynamic domain-agnostic card slot framework */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 shadow-xs">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                  Extracted Text Stream · Concise Summary
                 </p>
+                {loadingSummary ? (
+                  <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                    <Loader2 className="size-3.5 animate-spin text-primary" /> Building cross-disciplinary summary matrix...
+                  </div>
+                ) : (
+                  <p className="text-xs md:text-sm font-medium text-foreground leading-relaxed">
+                    {documentSummary || "No summary parameters structured yet for this asset."}
+                  </p>
+                )}
               </div>
+
+              {/* Raw extracted stream container */}
+              <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Raw Content Stream · Page Cache Matrix
+                </p>
+                <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
+                  {activeDoc.title}
+                </h3>
+                <div className="space-y-3 text-xs md:text-sm leading-relaxed text-muted-foreground/90 border-t border-border/40 pt-3 max-h-[300px] overflow-y-auto">
+                  <p className="whitespace-pre-wrap font-sans">
+                    {documentText || "No structural text was processed from this asset."}
+                  </p>
+                </div>
+              </div>
+
             </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
