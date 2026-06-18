@@ -95,7 +95,6 @@ export function DocumentStudio() {
       const summaryText = data.summary || "No summary available."
       
       setDocumentSummary(summaryText)
-      // Lock it into cache storage so it does not regenerate on re-render
       localStorage.setItem(`summary_${docId}`, summaryText)
     } catch (err) {
       console.error("Failed to fetch concise summary:", err)
@@ -215,19 +214,67 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
-      const insertedRow = await researchDocumentsCrud.insertRecord({
-        owner_id: user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""), 
-        file_name: file.name,
-        file_url: uniquePath,
-        file_size_bytes: file.size,
-        page_count: file.type === "application/pdf" ? undefined : 1, 
-        extracted_text: realExtractedText,
-        keywords: ["Academic", "Multi-Disciplinary", "Core Reference Matrix"],
-        readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
-        complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
-        methodology_latex: "L = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i)] + \\lambda \\sum_{j=1}^{M} w_j^2",
-      }) as DocumentRow
+      
+let totalPages = 1
+
+if (file.type === "application/pdf") {
+  realExtractedText = await extractTextFromPdf(file)
+  
+  try {
+    totalPages = await new Promise<number>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = function (e) {
+        const arr = new Uint8Array(e.target?.result as ArrayBuffer)
+        let count = 0
+        // Search the binary buffer for PDF page dictionary entries
+        for (let i = 0; i < arr.length - 5; i++) {
+          if (
+            arr[i] === 47 &&      // /
+            arr[i + 1] === 84 &&  // T
+            arr[i + 2] === 121 && // y
+            arr[i + 3] === 112 && // p
+            arr[i + 4] === 101 && // e
+            arr[i + 5] === 47 &&  // /
+            arr[i + 6] === 80 &&  // P
+            arr[i + 7] === 97 &&  // a
+            arr[i + 8] === 103 && // g
+            arr[i + 9] === 101 && // e
+            arr[i + 10] === 115   // s
+          ) {
+            // Found a /Type/Pages object container, check if it contains /Count
+            const context = new TextDecoder().decode(arr.subarray(i, Math.min(i + 150, arr.length)))
+            const match = context.match(/\/Count\s+(\d+)/)
+            if (match) {
+              count = Math.max(count, parseInt(match[1], 10))
+            }
+          }
+        } 
+        resolve(count > 0 ? count : 1)
+      }
+      reader.readAsArrayBuffer(file)
+    })
+  } catch (err) {
+    console.error("Failed to extract page metadata directly from binary:", err)
+    totalPages = 1
+    }
+  } else {
+    realExtractedText = await file.text()
+  }
+
+  setDocumentText(realExtractedText)
+        const insertedRow = await researchDocumentsCrud.insertRecord({
+          owner_id: user.id,
+          title: file.name.replace(/\.[^/.]+$/, ""), 
+          file_name: file.name,
+          file_url: uniquePath,
+          file_size_bytes: file.size,
+          page_count: totalPages, 
+          extracted_text: realExtractedText,
+          keywords: ["Academic", "Multi-Disciplinary", "Core Reference Matrix"],
+          readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
+          complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
+          methodology_latex: "L = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i)] + \\lambda \\sum_{j=1}^{M} w_j^2",
+        }) as DocumentRow
 
       await conceptNodesCrud.insertRecord({
         owner_id: user.id,
