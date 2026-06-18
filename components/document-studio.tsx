@@ -214,10 +214,17 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
+      const { data: publicUrlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(uniquePath)
+
+      const publicFileUrl = publicUrlData.publicUrl
+
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, ""), 
         file_name: file.name,
+        file_url: publicFileUrl,
         file_size_bytes: file.size,
         page_count: file.type === "application/pdf" ? undefined : 1, 
         extracted_text: realExtractedText,
