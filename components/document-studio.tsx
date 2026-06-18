@@ -290,12 +290,12 @@ export function DocumentStudio() {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 items-stretch">
+    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 items-start">
       
       {/* ==================== LEFT: EXPANDED MAIN READING CANVAS (8/12 WIDTH) ==================== */}
-      <section className="flex flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8 h-[78vh]">
+      <section className="flex flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8">
         {/* Document Action Headers & Selection Row */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background shrink-0">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
@@ -335,14 +335,14 @@ export function DocumentStudio() {
         </div>
 
         {errorMsg && (
-          <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive font-medium shrink-0">
+          <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive font-medium">
             <AlertCircle className="size-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Real-time Document selector rack */}
-        <div className="border-b border-border bg-muted/20 shrink-0">
+        <div className="border-b border-border bg-muted/20">
           <div className="px-4 pt-2 pb-0.5">
             <h4 className="text-[11px] font-bold text-foreground tracking-wide uppercase">Documents</h4>
           </div>
@@ -400,25 +400,25 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* Visual Render Canvas Frame (Takes all remaining left container height) */}
-        <div className="flex-1 p-3 bg-background min-h-0 overflow-hidden">
+        {/* Visual Render Canvas Frame (Natural Height Flow) */}
+        <div className="p-3 bg-background">
           {activeDoc ? (
-            <div className="flex flex-col h-full rounded-xl border border-border/80 bg-card p-3 shadow-xs overflow-hidden">
-              <div className="shrink-0">
+            <div className="flex flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs min-h-[600px]">
+              <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Visual Render Sandbox · Canvas Document Framework
                 </p>
-                <h3 className="mb-2 truncate text-sm font-semibold text-foreground">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">
                   {activeDoc.title}
                 </h3>
               </div>
               
-              <div className="flex-1 border-t border-border/40 pt-2 min-h-0">
+              <div className="flex-1 border-t border-border/40 pt-2">
                 <PdfVisualViewer fileUrl={activeDoc.file_url} />
               </div>
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
+            <div className="flex h-[600px] flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
               <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
               <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
@@ -427,11 +427,11 @@ export function DocumentStudio() {
         </div>
       </section>
 
-      {/* ==================== RIGHT: SLEEK & TAILORED SIDEBAR MATRIX (4/12 WIDTH) ==================== */}
-      <section className="flex flex-col gap-4 lg:col-span-4 h-[78vh]">
+      {/* ==================== RIGHT: SLEEK SIDEBAR MATRIX (4/12 WIDTH) ==================== */}
+      <section className="flex flex-col gap-4 lg:col-span-4">
         
-        {/* 1. Compact Metric Matrix (Top) */}
-        <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm shrink-0">
+        {/* 1. Compact Metric Matrix */}
+        <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -450,9 +450,9 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* 2. Compact Extracted Text Concise Summary (Middle Stack) */}
+        {/* 2. Compact Extracted Text Concise Summary */}
         {activeDoc && (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 shadow-xs shrink-0 max-h-[120px] overflow-y-auto">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 shadow-xs max-h-[120px] overflow-y-auto">
             <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
               Extracted Text Stream · Concise Summary
             </p>
@@ -468,9 +468,9 @@ export function DocumentStudio() {
           </div>
         )}
 
-        {/* 3. Adaptive Chat Studio (Fills all remaining height perfectly) */}
-        <div className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-0">
-          <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20 shrink-0">
+        {/* 3. Adaptive Chat Studio (Mirrors left container minimum bounds cleanly) */}
+        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-[460px]">
+          <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-1.5">
               <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
               <p className="text-xs font-bold uppercase tracking-wider text-card-foreground">Interaction Chat Studio</p>
@@ -490,8 +490,8 @@ export function DocumentStudio() {
             )}
           </div>
 
-          {/* Flexible Message stream matching left panel bounds */}
-          <div className="flex-1 space-y-4 overflow-y-auto p-3 min-h-0">
+          {/* Chat scrolling viewport area */}
+          <div className="flex-1 space-y-4 overflow-y-auto p-3 max-h-[300px]">
             {activeDoc ? (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
@@ -561,7 +561,7 @@ export function DocumentStudio() {
 
           {/* Quick Action Buttons Row */}
           {activeDoc && (
-            <div className="px-2 py-1.5 bg-muted/20 border-t border-border/60 shrink-0">
+            <div className="px-2 py-1.5 bg-muted/20 border-t border-border/60">
               <div className="flex flex-wrap gap-1">
                 <button
                   type="button"
@@ -592,7 +592,7 @@ export function DocumentStudio() {
           )}
 
           {/* Chat Form Submitter */}
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-2 bg-background shrink-0">
+          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-2 bg-background">
             <Highlighter className="size-3.5 text-muted-foreground" aria-hidden="true" />
             <input
               value={chatInput}
