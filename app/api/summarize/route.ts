@@ -1,12 +1,20 @@
-import { NextResponse } from "next/server";
+// Avoid importing next/server to prevent module/type resolution errors in some environments.
+// Use the standard Web Response API instead.
 import { GoogleGenAI } from "@google/genai";
+
+// Provide a minimal declaration for `process.env` to avoid TS errors in
+// environments where Node types are not available (e.g., edge/runtime).
+declare const process: { env: { GEMINI_API_KEY?: string } };
 
 export async function POST(request: Request) {
   try {
     const { text, fileName } = await request.json();
 
     if (!text || text.trim().length === 0) {
-      return NextResponse.json({ summary: "No text content found to summarize." }, { status: 400 });
+      return new Response(JSON.stringify({ summary: "No text content found to summarize." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const cleanSubject = fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
@@ -34,9 +42,15 @@ export async function POST(request: Request) {
     const realSummary = (response.text || "").trim();
 
     
-    return NextResponse.json({ summary: realSummary });
+    return new Response(JSON.stringify({ summary: realSummary }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
     } catch (error) {
       console.error("Summarization error:", error);
-      return NextResponse.json({ error: "Internal server error during analysis" }, { status: 500 });
+      return new Response(JSON.stringify({ error: "Internal server error during analysis" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 }
