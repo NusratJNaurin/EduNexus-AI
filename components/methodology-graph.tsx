@@ -26,7 +26,6 @@ import {
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud } from "@/lib/crud"
 
-// Localized structural type declarations
 type FeedbackItem = {
   t: string
   q: boolean
@@ -63,21 +62,16 @@ export function MethodologyGraph() {
   const [documents, setDocuments] = useState<DocumentRow[]>([])
   const [activeDoc, setActiveDoc] = useState<DocumentRow | null>(null)
   
-  // Audio Streaming Pipeline References & State
   const [recording, setRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   
-  // Chat Studio state
   const [messages, setMessages] = useState<{ id: string; text: string; isUser: boolean }[]>([
     { id: "init", text: "Welcome to the Methodology Graph Workspace terminal. Select a concept node or interact below.", isUser: false }
   ])
   const [chatInput, setChatInput] = useState("")
-
-  // Missing local states for streaming triggers
   const [sendingChat, setSendingChat] = useState(false)
 
-  // Scoring dialog modal state
   const [showScoreModal, setShowScoreModal] = useState(false)
   const [newQuestion, setNewQuestion] = useState("")
   const [newAnswer, setNewAnswer] = useState("")
@@ -121,7 +115,6 @@ export function MethodologyGraph() {
     }
   }
 
-  // Audio Capture Operations
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -139,8 +132,6 @@ export function MethodologyGraph() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
         await handleProcessAudioDefense(audioBlob)
-        
-        // Terminate hardware audio tracks manually to free microphone resource locks
         stream.getTracks().forEach(track => track.stop())
       }
 
@@ -163,7 +154,6 @@ export function MethodologyGraph() {
 
     const loadingTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     
-    // Inject streaming placeholder feedback immediately to optimize perceived latency
     setNodes(prevNodes => prevNodes.map(n => {
       if (n.id === selectedNode.id) {
         return {
@@ -252,7 +242,6 @@ export function MethodologyGraph() {
     }
   }
 
-  // Simulation prompt stream trigger inside the canvas context
   const executeChatStream = async (customPrompt: string) => {
     setSendingChat(true)
     const placeholderId = String(Date.now())
@@ -315,12 +304,13 @@ export function MethodologyGraph() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 p-4 lg:p-5">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-4 p-4 lg:p-5 w-full check-layout">
+        {/* Adjusted column grid settings to stretch elements down dynamically */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] items-stretch">
           
-          {/* LEFT CANVAS WORKSPACE AREA CONTAINER */}
-          <section className="relative min-h-[65vh] overflow-hidden rounded-xl border border-border bg-card flex flex-col">
-            <div className="flex items-center justify-between border-b border-border p-3">
+          {/* LEFT CANVAS WORKSPACE AREA CONTAINER - Stretched minimum viewport boundaries */}
+          <section className="relative min-h-[78vh] flex-1 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-sm">
+            <div className="flex items-center justify-between border-b border-border p-3 bg-card">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-primary" aria-hidden="true" />
                 <p className="text-sm font-semibold text-card-foreground">Relational Methodology Web Canvas</p>
@@ -399,18 +389,18 @@ export function MethodologyGraph() {
             </div>
           </section>
 
-          {/* RIGHT INTERACTIVE SOCRATIC SIDEBAR INTERACTIVE LOGGER FRAMEWORK */}
-          <section className="flex flex-col gap-4 min-h-[65vh]">
+          {/* RIGHT INTERACTIVE SOCRATIC SIDEBAR INTERACTIVE LOGGER FRAMEWORK - Locked to h-full flex configurations */}
+          <section className="flex flex-col gap-4 h-full min-h-[78vh]">
             
             {/* Viva Pod Module Panel */}
-            <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground">
+            <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground shadow-sm shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Radio className="size-4 text-accent" aria-hidden="true" />
                   <p className="text-sm font-semibold">Socratic Audio · Viva Pod</p>
                 </div>
                 {selectedNode && (
-                  <span className="text-[10px] bg-primary-foreground/10 px-2 py-0.5 rounded-md text-primary-foreground/80">
+                  <span className="text-[10px] bg-primary-foreground/10 px-2 py-0.5 rounded-md text-primary-foreground/80 max-w-[150px] truncate">
                     Target: {selectedNode.label}
                   </span>
                 )}
@@ -438,42 +428,43 @@ export function MethodologyGraph() {
               </div>
             </div>
 
-            {/* Integrated Live Viva Simulation Pod */}
-            {activeDoc && (
-              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            {/* Live Viva Board Simulation Engine Pod - Extended display borders cleanly */}
+            {selectedNode && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm shrink-0 transition-all animate-in fade-in duration-200">
                 <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
-                  <div>
+                  <div className="min-w-0 flex-1 pr-2">
                     <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                       Live Viva Board Simulation Engine
                     </h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Generates real-time defense prompts</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Real-time thesis defense simulator</p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={sendingChat}
-                    onClick={() => executeChatStream("Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions regarding the methodology, mathematical bounds, and computational assumptions present in this document context.")}
-                    className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors"
+                    onClick={() => executeChatStream(`Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions targeting the methodology parameters, experimental bounds, and core assumptions for the current highlighted node: "${selectedNode.label}" (${selectedNode.node_type}).`)}
+                    className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors shrink-0"
                   >
                     <Sparkles className="size-3.5 text-emerald-500" />
                     Generate Defense Set
                   </Button>
                 </div>
                 <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/50">
-                  <span className="font-semibold text-foreground">How it works:</span> Click the button above to fire examiner defense lines straight into your workspace panel below.
+                  <span className="font-semibold text-foreground">How it works:</span> Fire deep academic structural scrutiny regarding <span className="font-mono bg-background px-1 rounded border text-foreground">{selectedNode.label}</span> directly into the communication terminal framework below.
                 </div>
               </div>
             )}
 
-            {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK */}
-            <div className="flex flex-col rounded-xl border border-border bg-card flex-1 min-h-[280px]">
-              <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30">
+            {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK - flex-1 expands to take remaining height */}
+            <div className="flex flex-col rounded-xl border border-border bg-card flex-1 min-h-[300px] shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30 shrink-0">
                 <Sparkles className="size-4 text-primary" aria-hidden="true" />
                 <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio Terminal</p>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[180px]">
+              {/* Increased maximum scrolling layout threshold to capture full block updates */}
+              <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[320px]">
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
                     <div
@@ -489,15 +480,15 @@ export function MethodologyGraph() {
                 ))}
               </div>
 
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-border p-3 bg-background mt-auto">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-border p-3 bg-background mt-auto shrink-0">
                 <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
                 <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Query methodology schema vectors or write an analytics constraint rule parameter..."
-                  className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                  className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground text-foreground"
                 />
-                <Button type="submit" size="icon" className="size-8 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Button type="submit" size="icon" className="size-8 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
                   <Send className="size-3.5" />
                 </Button>
               </form>
@@ -505,7 +496,7 @@ export function MethodologyGraph() {
           </section>
         </div>
 
-        {/* INTERACTIVE DIALOG MODAL BOX WITH DYNAMIC INFO TOOLTIPS */}
+        {/* INTERACTIVE DIALOG MODAL BOX */}
         {showScoreModal && selectedNode && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl space-y-4">
@@ -603,8 +594,8 @@ export function MethodologyGraph() {
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex items-center gap-1.5 text-muted-foreground">
-      <span className={`size-2.5 rounded-sm ${color}`} />
+    <span className="flex items-center gap-1.5 text-muted-foreground font-medium select-none">
+      <span className={`size-2.5 rounded-sm ${color} shrink-0`} />
       {label}
     </span>
   )
