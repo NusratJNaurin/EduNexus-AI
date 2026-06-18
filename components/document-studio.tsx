@@ -71,11 +71,19 @@ export function DocumentStudio() {
     loadUserDocuments()
   }, [])
 
-  const fetchDocumentSummary = async (text: string, fileName: string) => {
+  const fetchDocumentSummary = async (text: string, fileName: string, docId: string) => {
     if (!text) {
       setDocumentSummary("")
       return
     }
+
+    // Check if a summary is already cached in localStorage for this document
+    const cachedSummary = localStorage.getItem(`summary_${docId}`)
+    if (cachedSummary) {
+      setDocumentSummary(cachedSummary)
+      return
+    }
+
     setLoadingSummary(true)
     try {
       const response = await fetch("/api/summarize", {
@@ -84,7 +92,11 @@ export function DocumentStudio() {
         body: JSON.stringify({ text, fileName }),
       })
       const data = await response.json()
-      setDocumentSummary(data.summary || "No summary available.")
+      const summaryText = data.summary || "No summary available."
+      
+      setDocumentSummary(summaryText)
+      // Lock it into cache storage so it does not regenerate on re-render
+      localStorage.setItem(`summary_${docId}`, summaryText)
     } catch (err) {
       console.error("Failed to fetch concise summary:", err)
       setDocumentSummary("Unable to parse a dynamic summary for this asset.")
@@ -97,7 +109,7 @@ export function DocumentStudio() {
     if (activeDoc) {
       const textContent = activeDoc.extracted_text || ""
       setDocumentText(textContent)
-      fetchDocumentSummary(textContent, activeDoc.file_name || activeDoc.title || "document.pdf")
+      fetchDocumentSummary(textContent, activeDoc.file_name || activeDoc.title || "document.pdf", activeDoc.id)
       
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
       setMessages(saved ? JSON.parse(saved) : [])
@@ -154,6 +166,10 @@ export function DocumentStudio() {
     setIsActionLoading(docId)
     try {
       await researchDocumentsCrud.deleteById(docId)
+      // Clean up cached elements when a row gets purged from db
+      localStorage.removeItem(`summary_${docId}`)
+      localStorage.removeItem(`chat_history_${docId}`)
+      
       setDocuments(prev => prev.filter(d => d.id !== docId))
       if (activeDoc?.id === docId) {
         const remaining = documents.filter(d => d.id !== docId)
@@ -400,7 +416,7 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* Visual Render Canvas Frame (Natural Height Flow) */}
+        {/* Visual Render Canvas Frame */}
         <div className="p-3 bg-background">
           {activeDoc ? (
             <div className="flex flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs min-h-[600px]">
@@ -450,9 +466,9 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* 2. Compact Extracted Text Concise Summary */}
+        {/* 2. Dynamic Extracted Text Concise Summary (No scroll restriction) */}
         {activeDoc && (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 shadow-xs max-h-[120px] overflow-y-auto">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 shadow-xs">
             <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
               Extracted Text Stream · Concise Summary
             </p>
@@ -468,7 +484,7 @@ export function DocumentStudio() {
           </div>
         )}
 
-        {/* 3. Adaptive Chat Studio (Mirrors left container minimum bounds cleanly) */}
+        {/* 3. Adaptive Chat Studio */}
         <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-[460px]">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-1.5">
@@ -491,7 +507,7 @@ export function DocumentStudio() {
           </div>
 
           {/* Chat scrolling viewport area */}
-          <div className="flex-1 space-y-4 overflow-y-auto p-3 max-h-[300px]">
+          <div className="flex-1 space-y-4 overflow-y-auto p-3 max-h-[400px]">
             {activeDoc ? (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
