@@ -1,10 +1,49 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
+
 interface PdfVisualViewerProps {
   fileUrl: string | null
 }
 
 export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  const isRemoteUrl = !!fileUrl && /^https?:\/\//i.test(fileUrl)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const resolveUrl = async () => {
+      if (!fileUrl) {
+        setResolvedUrl(null)
+        return
+      }
+
+      if (isRemoteUrl) {
+        setResolvedUrl(fileUrl)
+        return
+      }
+
+      const { data, error } = await supabase.storage.from("documents").createSignedUrl(fileUrl, 60 * 10)
+
+      if (!isMounted) return
+
+      if (error || !data?.signedUrl) {
+        setResolvedUrl(null)
+        return
+      }
+
+      setResolvedUrl(data.signedUrl)
+    }
+
+    void resolveUrl()
+
+    return () => {
+      isMounted = false
+    }
+  }, [fileUrl, isRemoteUrl])
+
   if (!fileUrl) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
@@ -13,11 +52,19 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
     )
   }
 
+  if (!resolvedUrl) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
+        Preparing private file access...
+      </div>
+    )
+  }
+
   return (
     <div className="w-full rounded-xl border border-border bg-muted/10 p-2">
       {/* Native Browser PDF Core Sandbox */}
       <iframe
-        src={`${fileUrl}#toolbar=1&navpanes=0`}
+        src={`${resolvedUrl}#toolbar=1&navpanes=0`}
         className="h-[600px] w-full rounded-lg bg-background shadow-xs"
         title="PDF Document Viewer"
       />

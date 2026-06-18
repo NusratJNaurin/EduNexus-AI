@@ -63,7 +63,6 @@ export function DocumentStudio() {
   const [sendingChat, setSendingChat] = useState(false)
   const [documentText, setDocumentText] = useState<string>("")
   
-  // NEW: Concise Summary state management hooks
   const [documentSummary, setDocumentSummary] = useState<string>("")
   const [loadingSummary, setLoadingSummary] = useState<boolean>(false)
 
@@ -78,8 +77,7 @@ export function DocumentStudio() {
   })
 
   useEffect(() => {
-    loadUserDocuments()
-  }, [])
+    loadUserDocuments()}, [])
 
   // NEW: Async worker to pull domain-agnostic summaries from your /api/summarize route
   const fetchDocumentSummary = async (text: string, fileName: string) => {
@@ -104,7 +102,7 @@ export function DocumentStudio() {
     }
   }
 
-  // UPDATED: Fires summary generation seamlessly when swapping active documentation items
+  // Generates summary seamlessly when swapping active documentation items
   useEffect(() => {
     if (activeDoc) {
       const textContent = activeDoc.extracted_text || ""
@@ -214,17 +212,17 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
-      const { data: publicUrlData } = supabase.storage
-        .from("documents")
-        .getPublicUrl(uniquePath)
+      // const { data: publicUrlData } = supabase.storage
+      //   .from("documents")
+      //   .getPublicUrl(uniquePath)
 
-      const publicFileUrl = publicUrlData.publicUrl
+      // const publicFileUrl = publicUrlData.publicUrl
 
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, ""), 
         file_name: file.name,
-        file_url: publicFileUrl,
+        file_url: uniquePath,
         file_size_bytes: file.size,
         page_count: file.type === "application/pdf" ? undefined : 1, 
         extracted_text: realExtractedText,
