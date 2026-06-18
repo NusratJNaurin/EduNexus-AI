@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { BlockMath } from "react-katex"
+import * as pdfjs from "pdfjs-dist"
 import {
   Search,
   FileText,
@@ -16,6 +17,9 @@ import {
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
 import "katex/dist/katex.min.css" 
+
+// Global worker setup required for pdfjs to function cleanly in the browser CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 type DocumentRow = {
   id: string
@@ -39,6 +43,23 @@ type ChatMessage = {
   isUser: boolean
 }
 
+// Global Core Client-Side PDF Text Extractor Utility
+async function extractTextFromPdf(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  let fullText = "";
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => item.str)
+      .join(" ");
+    fullText += `[Page ${i}] ${pageText}\n`;
+  }
+  return fullText;
+}
+
 const normalizeLatex = (latex: string) =>
   latex
     .trim()
@@ -51,14 +72,16 @@ export function DocumentStudio() {
   const [activeDoc, setActiveDoc] = useState<DocumentRow | null>(null)
   const [loadingDocs, setLoadingDocs] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [parsing, setParsing] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
+  const [documentText, setDocumentText] = useState<string>("")
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Deduplicated State: Combined local storage hydration into one primary declaration
+  // Combined local storage hydration into primary declaration
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window !== "undefined" && activeDoc?.id) {
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
@@ -72,17 +95,19 @@ export function DocumentStudio() {
     loadUserDocuments()
   }, [])
 
-  // 2. Automatically load history whenever the active document changes
+  // 2. Automatically sync active context text and chat history when document updates
   useEffect(() => {
-    if (activeDoc?.id) {
+    if (activeDoc) {
+      setDocumentText(activeDoc.extracted_text || "")
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
       setMessages(saved ? JSON.parse(saved) : [])
     } else {
+      setDocumentText("")
       setMessages([])
     }
   }, [activeDoc?.id])
 
-  // 3. Automatically save messages to localStorage whenever a message is appended
+  // 3. Automatically save messages to localStorage whenever thread is modified
   useEffect(() => {
     if (activeDoc?.id) {
       localStorage.setItem(`chat_history_${activeDoc.id}`, JSON.stringify(messages))
@@ -111,16 +136,27 @@ export function DocumentStudio() {
     if (!file) return
 
     setUploading(true)
+    setParsing(true)
     setErrorMsg("")
 
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error("Authentication context not found. Please log in again.")
 
+      // Core Client-Side Extraction Matrix Execution
+      let realExtractedText = ""
+      if (file.type === "application/pdf") {
+        realExtractedText = await extractTextFromPdf(file)
+      } else {
+        realExtractedText = await file.text()
+      }
+      
+      setDocumentText(realExtractedText)
+
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
       const uniquePath = `${user.id}/${Date.now()}_${cleanFileName}`
 
-      const { data: storageData, error: storageError } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(uniquePath, file, {
           cacheControl: "3600",
@@ -134,12 +170,12 @@ export function DocumentStudio() {
         title: file.name.replace(/\.[^/.]+$/, ""), 
         file_name: file.name,
         file_size_bytes: file.size,
-        page_count: Math.floor(Math.random() * 15) + 5, 
-        extracted_text: `Extracted content stream for ${file.name}: We investigate academic variables matching Qatar University computational structures. Statistical significance was confirmed across testing cohorts (p < 0.01).`,
-        keywords: ["Academic", "QU Research", "Dataset Analysis"],
+        page_count: file.type === "application/pdf" ? undefined : 1, 
+        extracted_text: realExtractedText,
+        keywords: ["Academic", "Physics Notation", "Dataset Analysis"],
         readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
         complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
-        methodology_latex: "Latency = \\frac{T_{cloud} - T_{edge}}{T_{cloud}}",
+        methodology_latex: "v = v_0 + at",
       }) as DocumentRow
 
       await conceptNodesCrud.insertRecord({
@@ -151,11 +187,13 @@ export function DocumentStudio() {
 
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
+      console.log("File structural text extracted and coordinated with standard repository schemas.")
     } catch (err: any) {
       console.error("Upload process crashed:", err)
       setErrorMsg(err.message || "An unexpected error occurred during document integration.")
     } finally {
       setUploading(false)
+      setParsing(false)
       if (fileInputRef.current) fileInputRef.current.value = "" 
     }
   }
@@ -178,7 +216,7 @@ export function DocumentStudio() {
         body: JSON.stringify({
           prompt: promptText,
           formulaContext: activeDoc.methodology_latex || "",
-          documentText: activeDoc.extracted_text || ""
+          documentText: documentText || activeDoc.extracted_text || ""
         })
       })
 
@@ -242,14 +280,14 @@ export function DocumentStudio() {
           
           <Button 
             onClick={() => fileInputRef.current?.click()} 
-            disabled={uploading} 
+            disabled={uploading || parsing} 
             size="sm" 
             className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {uploading ? (
+            {uploading || parsing ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Uploading...
+                Processing PDF...
               </>
             ) : (
               <>
@@ -304,7 +342,7 @@ export function DocumentStudio() {
               </h3>
               <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
                 <p className="whitespace-pre-wrap">
-                  {activeDoc.extracted_text || "No structural text was processed from this asset."}
+                  {documentText || "No structural text was processed from this asset."}
                 </p>
               </div>
             </div>
