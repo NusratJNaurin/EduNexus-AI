@@ -1,0 +1,5 @@
+# pnpm v9+ configuration
+shamefully-hoist=false
+strict-peer-dependencies=false
+auto-install-peers=true
+fetch-timeout=60000
