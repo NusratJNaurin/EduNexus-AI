@@ -1,3 +1,8 @@
 # pnpm workspace configuration
 # Build scripts are now configured in root package.json via pnpm.onlyBuiltDependencies
 
+allowBuilds:
+  '@google/genai': set this to true or false
+  msw: set this to true or false
+  protobufjs: set this to true or false
+  sharp: set this to true or false
