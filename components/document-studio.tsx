@@ -12,13 +12,14 @@ import {
   Sparkles,
   UploadCloud,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  FileEdit,
+  Trash2
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
 import "katex/dist/katex.min.css" 
 
-// Global worker setup required for pdfjs to function cleanly in the browser CDN
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 type DocumentRow = {
@@ -43,7 +44,6 @@ type ChatMessage = {
   isUser: boolean
 }
 
-// Global Core Client-Side PDF Text Extractor Utility
 async function extractTextFromPdf(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
@@ -73,6 +73,7 @@ export function DocumentStudio() {
   const [loadingDocs, setLoadingDocs] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [parsing, setParsing] = useState(false)
+  const [isActionLoading, setIsActionLoading] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [chatInput, setChatInput] = useState("")
@@ -81,7 +82,6 @@ export function DocumentStudio() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Combined local storage hydration into primary declaration
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window !== "undefined" && activeDoc?.id) {
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
@@ -90,12 +90,10 @@ export function DocumentStudio() {
     return []
   })
 
-  // 1. Fetch User Documents on Mount
   useEffect(() => {
     loadUserDocuments()
   }, [])
 
-  // 2. Automatically sync active context text and chat history when document updates
   useEffect(() => {
     if (activeDoc) {
       setDocumentText(activeDoc.extracted_text || "")
@@ -107,7 +105,6 @@ export function DocumentStudio() {
     }
   }, [activeDoc?.id])
 
-  // 3. Automatically save messages to localStorage whenever thread is modified
   useEffect(() => {
     if (activeDoc?.id) {
       localStorage.setItem(`chat_history_${activeDoc.id}`, JSON.stringify(messages))
@@ -131,6 +128,44 @@ export function DocumentStudio() {
     }
   }
 
+  // UPDATED: Dynamic CRUD Rename Handler Integration
+  const handleRenameDoc = async (e: React.MouseEvent, docId: string, currentTitle: string) => {
+    e.stopPropagation() // Prevent selecting document row accidently
+    const updatedName = prompt("Enter new structural name parameters for this document:", currentTitle)
+    if (!updatedName || updatedName.trim() === currentTitle) return
+
+    try {
+      await researchDocumentsCrud.updateById(docId, { title: updatedName.trim() })
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, title: updatedName.trim() } : d))
+      if (activeDoc?.id === docId) {
+        setActiveDoc(prev => prev ? { ...prev, title: updatedName.trim() } : null)
+      }
+    } catch (err) {
+      console.error("Failed to execute database rename pipeline update:", err)
+    }
+  }
+
+  // UPDATED: Dynamic CRUD Delete Handler Integration
+  const handleDeleteDoc = async (e: React.MouseEvent, docId: string) => {
+    e.stopPropagation() // Prevent selecting document row accidently
+    if (!confirm("Are you certain you want to purge this document row out of your core schema environment?")) return
+
+    setIsActionLoading(docId)
+    try {
+      await researchDocumentsCrud.deleteById(docId)
+      setDocuments(prev => prev.filter(d => d.id !== docId))
+      
+      if (activeDoc?.id === docId) {
+        const remaining = documents.filter(d => d.id !== docId)
+        setActiveDoc(remaining.length > 0 ? remaining[0] : null)
+      }
+    } catch (err) {
+      console.error("Failed to clean up database document reference entity:", err)
+    } finally {
+      setIsActionLoading(null)
+    }
+  }
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -143,7 +178,6 @@ export function DocumentStudio() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error("Authentication context not found. Please log in again.")
 
-      // Core Client-Side Extraction Matrix Execution
       let realExtractedText = ""
       if (file.type === "application/pdf") {
         realExtractedText = await extractTextFromPdf(file)
@@ -187,7 +221,6 @@ export function DocumentStudio() {
 
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
-      console.log("File structural text extracted and coordinated with standard repository schemas.")
     } catch (err: any) {
       console.error("Upload process crashed:", err)
       setErrorMsg(err.message || "An unexpected error occurred during document integration.")
@@ -258,8 +291,8 @@ export function DocumentStudio() {
   return (
     <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2 lg:p-5">
       {/* LEFT: Live Document Manager & Content Stream */}
-      <section className="flex min-h-[70vh] flex-col rounded-xl border border-border bg-card">
-        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+      <section className="flex min-h-[70vh] flex-col rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
@@ -305,43 +338,77 @@ export function DocumentStudio() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-border bg-muted/40 p-2">
-          {loadingDocs ? (
-            <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" /> Fetching academic repo...
-            </div>
-          ) : filteredDocs.length === 0 ? (
-            <p className="px-3 py-1 text-xs text-muted-foreground italic">No research papers uploaded yet.</p>
-          ) : (
-            filteredDocs.map((doc) => (
-              <button
-                key={doc.id}
-                type="button"
-                onClick={() => setActiveDoc(doc)}
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeDoc?.id === doc.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:text-foreground border border-border"
-                }`}
-              >
-                <FileText className="size-3.5" aria-hidden="true" />
-                <span className="max-w-[140px] truncate">{doc.file_name || doc.title}</span>
-              </button>
-            ))
-          )}
+        {/* RECONFIGURED: Horizontal Tab bar translated into a Native Document Checklist Tree Frame */}
+        <div className="border-b border-border bg-muted/20">
+          <div className="px-4 pt-3 pb-1">
+            <h4 className="text-xs font-bold text-foreground tracking-wide">Documents</h4>
+          </div>
+
+          <div className="flex flex-col gap-1 p-3 max-h-[220px] overflow-y-auto">
+            {loadingDocs ? (
+              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground justify-center">
+                <Loader2 className="size-3.5 animate-spin text-primary" /> Fetching platform resources...
+              </div>
+            ) : filteredDocs.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic py-2 text-center">No research papers uploaded yet.</p>
+            ) : (
+              filteredDocs.map((doc) => {
+                const isActive = activeDoc?.id === doc.id
+                return (
+                  <div
+                    key={doc.id}
+                    onClick={() => setActiveDoc(doc)}
+                    className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all border ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-card text-foreground hover:bg-muted/60 border-border/70"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                      <FileText className={`size-4 shrink-0 ${isActive ? "text-primary-foreground" : "text-primary"}`} />
+                      <span className="truncate">{doc.title || doc.file_name}</span>
+                    </div>
+
+                    {/* Dynamic Action Controls Matrix shown on layout list element row hover */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleRenameDoc(e, doc.id, doc.title || "")}
+                        className={`p-1 rounded-md transition-colors ${isActive ? "hover:bg-primary-foreground/20 text-primary-foreground/90" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <FileEdit className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isActionLoading === doc.id}
+                        onClick={(e) => handleDeleteDoc(e, doc.id)}
+                        className={`p-1 rounded-md transition-colors ${isActive ? "hover:bg-primary-foreground/20 text-primary-foreground/90" : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive"}`}
+                      >
+                        {isActionLoading === doc.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="flex-1 space-y-4 overflow-y-auto p-5 bg-background">
           {activeDoc ? (
-            <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-accent-foreground/70">
+            <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Extracted Text Stream · Page Cache Matrix
               </p>
-              <h3 className="mb-4 text-balance text-lg font-semibold text-foreground">
+              <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
                 {activeDoc.title}
               </h3>
-              <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-                <p className="whitespace-pre-wrap">
+              <div className="space-y-3 text-xs md:text-sm leading-relaxed text-muted-foreground/90 border-t border-border/40 pt-3">
+                <p className="whitespace-pre-wrap font-sans">
                   {documentText || "No structural text was processed from this asset."}
                 </p>
               </div>
@@ -350,7 +417,7 @@ export function DocumentStudio() {
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
               <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
-              <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors and metric matrix models live.</p>
+              <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
             </div>
           )}
         </div>
@@ -358,7 +425,7 @@ export function DocumentStudio() {
 
       {/* RIGHT: Dynamic Matrix Framework + Formula + Prompt Terminal */}
       <section className="flex min-h-[70vh] flex-col gap-4">
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="mb-3 text-sm font-semibold text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-3">
             {[
@@ -377,7 +444,7 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="mb-2 text-sm font-semibold text-card-foreground">Methodology Formula Architecture</p>
           {activeDoc?.methodology_latex ? (
             <div className="overflow-x-auto rounded-lg border border-border bg-background p-4 text-foreground shadow-sm">
@@ -391,7 +458,7 @@ export function DocumentStudio() {
         </div>
 
         {/* Source-Grounded Interaction Chat Studio */}
-        <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-primary" aria-hidden="true" />
@@ -426,7 +493,7 @@ export function DocumentStudio() {
                       className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                         m.isUser
                           ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "border border-border bg-background text-foreground rounded-tl-sm"
+                          : "border border-border bg-background text-foreground rounded-tl-sm shadow-xs"
                       }`}
                     >
                       {m.isUser ? (
