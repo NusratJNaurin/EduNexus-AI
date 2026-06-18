@@ -3,9 +3,8 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Set up the global worker CDN securely only in the browser
 if (typeof window !== "undefined") {
-  // Fixes potential missing DOMMatrix/Canvas issues during server-side pre-rendering
   if (pdfjs?.GlobalWorkerOptions) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.mjs`;
   }
 }
 
