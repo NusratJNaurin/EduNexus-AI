@@ -1,7 +1,3 @@
-allowBuilds:
-  '@ampproject/toolbox-optimizer': true
-  '@google/genai': true
-  es5-ext: true
-  msw: true
-  protobufjs: true
-  sharp: set this to true or false
+# pnpm workspace configuration
+# Build scripts are now configured in root package.json via pnpm.onlyBuiltDependencies
+
