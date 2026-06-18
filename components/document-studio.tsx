@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { BlockMath } from "react-katex"
-import * as pdfjs from "pdfjs-dist"
+import { extractTextFromPdf } from "@/lib/pdfWorker"
 import {
   Search,
   FileText,
@@ -19,8 +19,6 @@ import {
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
 import "katex/dist/katex.min.css" 
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 type DocumentRow = {
   id: string
@@ -42,22 +40,6 @@ type ChatMessage = {
   id: string
   text: string
   isUser: boolean
-}
-
-async function extractTextFromPdf(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  let fullText = "";
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item: any) => item.str)
-      .join(" ");
-    fullText += `[Page ${i}] ${pageText}\n`;
-  }
-  return fullText;
 }
 
 const normalizeLatex = (latex: string) =>
