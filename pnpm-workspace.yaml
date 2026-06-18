@@ -1,7 +1,7 @@
 allowBuilds:
-  '@ampproject/toolbox-optimizer': set this to true or false
-  '@google/genai': set this to true or false
-  es5-ext: set this to true or false
-  msw: set this to true or false
-  protobufjs: set this to true or false
+  '@ampproject/toolbox-optimizer': true
+  '@google/genai': true
+  es5-ext: true
+  msw: true
+  protobufjs: true
   sharp: set this to true or false
