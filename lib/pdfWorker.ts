@@ -1,11 +1,20 @@
-import * as pdfjs from 'pdfjs-dist';
+// @ts-ignore - Uses the legacy build safe for Next.js SSR / Node environments
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
-// Set up the global worker CDN for parsing performance
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set up the global worker CDN securely only in the browser
+if (typeof window !== "undefined") {
+  // Fixes potential missing DOMMatrix/Canvas issues during server-side pre-rendering
+  if (pdfjs?.GlobalWorkerOptions) {
+    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+  }
+}
 
 export async function extractTextFromPdf(file: File): Promise<string> {
+  // Prevent execution on the server completely during prerendering
+  if (typeof window === "undefined") return "";
+
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await (pdfjs as any).getDocument({ data: arrayBuffer }).promise;
   let fullText = "";
 
   for (let i = 1; i <= pdf.numPages; i++) {
