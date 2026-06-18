@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { BlockMath } from "react-katex"
 import { extractTextFromPdf } from "@/lib/pdfWorker"
 import {
   Search,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
-import "katex/dist/katex.min.css" 
 import { PdfVisualViewer } from "./PdfVisualViewer"
 
 type DocumentRow = {
@@ -42,13 +40,6 @@ type ChatMessage = {
   text: string
   isUser: boolean
 }
-
-const normalizeLatex = (latex: string) =>
-  latex
-    .trim()
-    .replace(/^\$\$?/, "")
-    .replace(/\$\$$/, "")
-    .replace(/\\\\/g, "\\")
 
 export function DocumentStudio() {
   const [documents, setDocuments] = useState<DocumentRow[]>([])
@@ -77,9 +68,9 @@ export function DocumentStudio() {
   })
 
   useEffect(() => {
-    loadUserDocuments()}, [])
+    loadUserDocuments()
+  }, [])
 
-  // NEW: Async worker to pull domain-agnostic summaries from your /api/summarize route
   const fetchDocumentSummary = async (text: string, fileName: string) => {
     if (!text) {
       setDocumentSummary("")
@@ -102,13 +93,10 @@ export function DocumentStudio() {
     }
   }
 
-  // Generates summary seamlessly when swapping active documentation items
   useEffect(() => {
     if (activeDoc) {
       const textContent = activeDoc.extracted_text || ""
       setDocumentText(textContent)
-      
-      // Fetch summary when document changes
       fetchDocumentSummary(textContent, activeDoc.file_name || activeDoc.title || "document.pdf")
       
       const saved = localStorage.getItem(`chat_history_${activeDoc.id}`)
@@ -167,7 +155,6 @@ export function DocumentStudio() {
     try {
       await researchDocumentsCrud.deleteById(docId)
       setDocuments(prev => prev.filter(d => d.id !== docId))
-      
       if (activeDoc?.id === docId) {
         const remaining = documents.filter(d => d.id !== docId)
         setActiveDoc(remaining.length > 0 ? remaining[0] : null)
@@ -212,12 +199,6 @@ export function DocumentStudio() {
 
       if (storageError) throw storageError
 
-      // const { data: publicUrlData } = supabase.storage
-      //   .from("documents")
-      //   .getPublicUrl(uniquePath)
-
-      // const publicFileUrl = publicUrlData.publicUrl
-
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, ""), 
@@ -229,7 +210,7 @@ export function DocumentStudio() {
         keywords: ["Academic", "Multi-Disciplinary", "Core Reference Matrix"],
         readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
         complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
-        methodology_latex: "E = mc^2",
+        methodology_latex: "L = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i)] + \\lambda \\sum_{j=1}^{M} w_j^2",
       }) as DocumentRow
 
       await conceptNodesCrud.insertRecord({
@@ -309,9 +290,11 @@ export function DocumentStudio() {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2 lg:p-5">
-      {/* LEFT: Live Document Manager & Content Stream */}
-      <section className="flex min-h-[70vh] flex-col rounded-xl border border-border bg-card overflow-hidden">
+    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 items-start">
+      
+      {/* ==================== LEFT: MAIN READING CANVAS (7/12 WIDTH) ==================== */}
+      <section className="flex flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-7 h-full">
+        {/* Document Action Headers & Selection Row */}
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -358,12 +341,13 @@ export function DocumentStudio() {
           </div>
         )}
 
+        {/* Real-time Document selector rack */}
         <div className="border-b border-border bg-muted/20">
           <div className="px-4 pt-3 pb-1">
             <h4 className="text-xs font-bold text-foreground tracking-wide">Documents</h4>
           </div>
 
-          <div className="flex flex-col gap-1 p-3 max-h-[220px] overflow-y-auto">
+          <div className="flex flex-col gap-1 p-3 max-h-[160px] overflow-y-auto">
             {loadingDocs ? (
               <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground justify-center">
                 <Loader2 className="size-3.5 animate-spin text-primary" /> Fetching platform resources...
@@ -377,7 +361,7 @@ export function DocumentStudio() {
                   <div
                     key={doc.id}
                     onClick={() => setActiveDoc(doc)}
-                    className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all border ${
+                    className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all border ${
                       isActive
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-card text-foreground hover:bg-muted/60 border-border/70"
@@ -416,59 +400,23 @@ export function DocumentStudio() {
           </div>
         </div>
 
-        {/* UPDATED: Accommodates both Concise Summarizer state logic and the explicit document layout */}
-        <div className="flex-1 space-y-4 overflow-y-auto p-5 bg-background">
+        {/* Visual Render Canvas Frame */}
+        <div className="flex-1 p-4 bg-background">
           {activeDoc ? (
-            <div className="space-y-4">
+            <div className="rounded-xl border border-border/80 bg-card p-4 shadow-xs">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Visual Render Sandbox · Canvas Document Framework
+              </p>
+              <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
+                {activeDoc.title}
+              </h3>
               
-              {/* NEW REFACTOR: Dynamic domain-agnostic card slot framework */}
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 shadow-xs">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-                  Extracted Text Stream · Concise Summary
-                </p>
-                {loadingSummary ? (
-                  <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin text-primary" /> Building cross-disciplinary summary matrix...
-                  </div>
-                ) : (
-                  <p className="text-xs md:text-sm font-medium text-foreground leading-relaxed">
-                    {documentSummary || "No summary parameters structured yet for this asset."}
-                  </p>
-                )}
+              <div className="border-t border-border/40 pt-3">
+                <PdfVisualViewer fileUrl={activeDoc.file_url} />
               </div>
-
-              {/* Raw extracted stream container */}
-              {/* <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Raw Content Stream · Page Cache Matrix
-                </p>
-                <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
-                  {activeDoc.title}
-                </h3>
-                <div className="space-y-3 text-xs md:text-sm leading-relaxed text-muted-foreground/90 border-t border-border/40 pt-3 max-h-[300px] overflow-y-auto">
-                  <p className="whitespace-pre-wrap font-sans">
-                    { documentText || "No structural text was processed from this asset."}
-                  </p>
-                </div>
-              </div> */}
-
-              <div className="rounded-xl border border-border/80 bg-card p-5 shadow-xs">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Visual Render Sandbox · Canvas Document Framework
-                </p>
-                <h3 className="mb-3 text-balance text-base font-semibold text-foreground">
-                  {activeDoc.title}
-                </h3>
-                
-                <div className="border-t border-border/40 pt-3">
-                  {/* Visual PDF Viewer replaces the old text block wrapper */}
-                  <PdfVisualViewer fileUrl={activeDoc.file_url} />
-                </div>
-              </div>
-
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
+            <div className="flex h-[55vh] flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
               <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
               <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
@@ -477,8 +425,10 @@ export function DocumentStudio() {
         </div>
       </section>
 
-      {/* RIGHT: Dynamic Matrix Framework + Formula + Prompt Terminal */}
-      <section className="flex min-h-[70vh] flex-col gap-4">
+      {/* ==================== RIGHT: STACKED METRIC & ANALYSIS SIDEBAR (5/12 WIDTH) ==================== */}
+      <section className="flex flex-col gap-4 lg:col-span-5 h-full">
+        
+        {/* 1. Single File Metric Matrix (Top) */}
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="mb-3 text-sm font-semibold text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-3">
@@ -490,29 +440,34 @@ export function DocumentStudio() {
               ["Complexity Tier", activeDoc?.complexity_score != null ? `${activeDoc.complexity_score}%` : "—"],
               ["Keywords Found", activeDoc?.keywords ? String(activeDoc.keywords.length) : "—"],
             ].map(([l, v]) => (
-              <div key={l} className="rounded-lg border border-border bg-background p-3">
+              <div key={l} className="rounded-lg border border-border bg-background p-2.5">
                 <p className="text-[11px] text-muted-foreground">{l}</p>
-                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground">{v}</p>
+                <p className="mt-0.5 font-mono text-xs font-semibold text-foreground">{v}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="mb-2 text-sm font-semibold text-card-foreground">Methodology Formula Architecture</p>
-          {activeDoc?.methodology_latex ? (
-            <div className="overflow-x-auto rounded-lg border border-border bg-background p-4 text-foreground shadow-sm">
-              <BlockMath math={normalizeLatex(activeDoc.methodology_latex)} errorColor="#dc2626" />
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-              Formula notation matches document context stream logic.
-            </div>
-          )}
-        </div>
+        {/* 2. Extracted Text Concise Summary (Middle Stack) */}
+        {activeDoc && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 shadow-xs">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+              Extracted Text Stream · Concise Summary
+            </p>
+            {loadingSummary ? (
+              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin text-primary" /> Building cross-disciplinary summary matrix...
+              </div>
+            ) : (
+              <p className="text-xs font-medium text-foreground leading-relaxed">
+                {documentSummary || "No summary parameters structured yet for this asset."}
+              </p>
+            )}
+          </div>
+        )}
 
-        {/* Source-Grounded Interaction Chat Studio */}
-        <div className="flex min-h-[320px] flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+        {/* 3. Source-Grounded Interaction Chat Studio (Bottom Stack) */}
+        <div className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-[350px]">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-primary" aria-hidden="true" />
@@ -533,7 +488,8 @@ export function DocumentStudio() {
             )}
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[280px]">
+          {/* Dynamic Message Stream Area */}
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 max-h-[320px]">
             {activeDoc ? (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
@@ -601,14 +557,15 @@ export function DocumentStudio() {
             )}
           </div>
 
+          {/* Context Trigger Footer Quick Action Buttons */}
           {activeDoc && (
-            <div className="px-3 py-2.5 bg-muted/20 border-t border-border/60">
+            <div className="px-3 py-2 bg-muted/20 border-t border-border/60">
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   disabled={sendingChat}
                   onClick={() => executeChatStream("Scan the uploaded research document text and extract the core methodology parameters, prerequisites, and literature gaps as structured data points.")}
-                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
                 >
                   Extract Methodology Nodes
                 </button>
@@ -616,7 +573,7 @@ export function DocumentStudio() {
                   type="button"
                   disabled={sendingChat}
                   onClick={() => executeChatStream("Isolate and evaluate all explicit limitations, experimental constraints, and future work vectors outlined by the authors in this paper.")}
-                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
                 >
                   Summarize Limitations & Scope
                 </button>
@@ -624,7 +581,7 @@ export function DocumentStudio() {
                   type="button"
                   disabled={sendingChat}
                   onClick={() => executeChatStream("Cross-reference the central claims or technical figures in this document to evaluate if they have direct, verifiable evidence inside the text.")}
-                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                  className="rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
                 >
                   Verify Evidence Matrix
                 </button>
@@ -632,6 +589,7 @@ export function DocumentStudio() {
             </div>
           )}
 
+          {/* Live Command Text Submission Form */}
           <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-3 bg-background">
             <Highlighter className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
@@ -639,15 +597,15 @@ export function DocumentStudio() {
               disabled={!activeDoc || sendingChat}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder={activeDoc ? "Ask a source-grounded question..." : "Upload a paper first to interact"}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 text-foreground"
+              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:opacity-50 text-foreground"
             />
             <Button 
               type="submit" 
               size="icon" 
               disabled={!activeDoc || !chatInput.trim() || sendingChat} 
-              className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 h-8 w-8"
             >
-              <Send className="size-4" />
+              <Send className="size-3.5" />
             </Button>
           </form>
         </div>
