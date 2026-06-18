@@ -4,7 +4,7 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 // Set up the global worker CDN securely only in the browser
 if (typeof window !== "undefined") {
   if (pdfjs?.GlobalWorkerOptions) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
   }
 }
 
