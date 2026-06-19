@@ -94,8 +94,8 @@ export function MethodologyGraph() {
         .map((item, idx) => ({
           id: item.id,
           owner_id: item.owner_id,
-          x: item.x ?? (idx * 22 % 60 + 20),
-          y: item.y ?? (idx * 18 % 50 + 25),
+          x: item.x ?? ((idx * 150) % 500 + 50),
+          y: item.y ?? ((idx * 100) % 400 + 50),
           label: item.label || "Unnamed Concept Parameter",
           node_type: item.node_type || "paper",
           viva_feedback: item.viva_feedback || [] 
