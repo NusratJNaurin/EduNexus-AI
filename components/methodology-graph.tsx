@@ -38,7 +38,7 @@ type Node = {
   x: number
   y: number
   label: string
-  node_type: "paper" | "prereq" | "gap"
+  node_type: "paper" | "prerequisite" | "research_gap"
   viva_feedback?: FeedbackItem[]
 }
 
@@ -103,7 +103,7 @@ export function MethodologyGraph() {
           id: item.id,
           owner_id: item.owner_id,
           x: item.x ?? (idx === 0 ? cx : Math.min(width - padding, Math.max(padding, cx + Math.cos(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
-y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy + Math.sin(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
+          y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy + Math.sin(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
           label: item.label || "Unnamed Concept Parameter",
           node_type: item.node_type || "paper",
           viva_feedback: item.viva_feedback || [] 
@@ -350,13 +350,13 @@ y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy +
                       return (
                         <line
                           key={i}
-                          x1={`${na.x}%`}
-                          y1={`${na.y}%`}
-                          x2={`${nb.x}%`}
-                          y2={`${nb.y}%`}
+                          x1={na.x} 
+                          y1={na.y} 
+                          x2={nb.x} 
+                          y2={nb.y}
                           stroke="var(--color-border)"
                           strokeWidth={1.5}
-                          strokeDasharray={na.node_type === "gap" || nb.node_type === "gap" ? "4 4" : undefined}
+                          strokeDasharray={na.node_type === "research_gap" || nb.node_type === "research_gap" ? "4 4" : undefined}
                         />
                       )
                     })}
@@ -364,14 +364,14 @@ y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy +
 
                   {nodes.map((n) => {
                     const isSelected = selectedNode?.id === n.id
-                    const Icon = n.node_type === "paper" ? FileText : n.node_type === "prereq" ? Layers : Lightbulb
+                    const Icon = n.node_type === "paper" ? FileText : n.node_type === "prerequisite" ? Layers : Lightbulb
                     return (
                       <button
                         key={n.id}
                         type="button"
                         onClick={() => setSelectedNode(n)}
                         className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95"
-                        style={{ left: `${n.x}%`, top: `${n.y}%`, zIndex: isSelected ? 30 : 10 }}
+                        style={{ left: `${n.x}px`, top: `${n.y}px`, zIndex: isSelected ? 30 : 10 }}
                       >
                         <div
                           className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
@@ -381,7 +381,7 @@ y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy +
                           } ${
                             n.node_type === "paper"
                               ? "bg-primary text-primary-foreground border-primary"
-                              : n.node_type === "prereq"
+                              : n.node_type === "prerequisite"
                                 ? "bg-accent text-accent-foreground border-accent"
                                 : "border-2 border-dashed border-accent bg-card text-foreground"
                           }`}
