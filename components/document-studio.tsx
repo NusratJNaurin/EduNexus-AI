@@ -280,7 +280,7 @@ export function DocumentStudio() {
         
         // If there is an intersection match on the keywords, classify it dynamically as a tracking prerequisite tier
         if (hasOverlap) {
-          determinedType = "Core Prerequisite"
+          determinedType = "prerequisite"
         }
       } catch (e) {
         console.error("Prerequisite context lookup failed, defaulting to normal structure:", e)
