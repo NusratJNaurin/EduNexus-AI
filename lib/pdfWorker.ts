@@ -8,9 +8,9 @@ if (typeof window !== "undefined") {
   }
 }
 
-export async function extractTextFromPdf(file: File): Promise<string> {
+export async function extractTextFromPdf(file: File): Promise<{ text: string; pageCount: number }> {
   // Prevent execution on the server completely during prerendering
-  if (typeof window === "undefined") return "";
+  if (typeof window === "undefined") return { text: "", pageCount: 0 };
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await (pdfjs as any).getDocument({ data: arrayBuffer }).promise;
@@ -25,5 +25,5 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     fullText += `[Page ${i}] ${pageText}\n`;
   }
 
-  return fullText;
+  return { text: fullText, pageCount: pdf.numPages };
 }
