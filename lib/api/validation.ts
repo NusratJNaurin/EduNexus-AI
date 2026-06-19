@@ -23,6 +23,8 @@ export const analyzeDependenciesExistingNodeSchema = z.object({
   id: z.string().uuid(),
   label: z.string().trim().min(1).max(500),
   node_type: conceptNodeTypeSchema,
+  keywords: z.array(z.string()).optional(), 
+  summary: z.string().optional(),
 })
 
 export const analyzeDependenciesRequestSchema = z.object({
