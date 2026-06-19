@@ -23,7 +23,6 @@ import type { ChatMessage, ConceptNodeType, ResearchDocumentRow } from "@/lib/ty
 import { PdfVisualViewer } from "./PdfVisualViewer"
 import { z } from "zod"
 import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
-
 export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
 
 interface DocumentStudioProps { onNodesUpdated?: () => void}
@@ -193,9 +192,19 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
     }
   }
 
+  const organizationalTimerRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    return () => {
+      if (organizationalTimerRef.current) {
+        clearTimeout(organizationalTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file) 
+      return
 
     setUploading(true)
     setParsing(true)
@@ -228,10 +237,12 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         .from("documents")
         .upload(uniquePath, file, { cacheControl: "3600", upsert: true })
 
-      if (storageError) throw storageError
+      if (storageError) 
+        throw storageError
 
       const detectedKeywords = detectKeywords(realExtractedText)
 
+      // 1. Immediately insert document record
       const insertedRow = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, ""),
@@ -245,60 +256,87 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         complexity_score: computeComplexityScore(realExtractedText, totalPages),
       })
 
-      const existingNodes = await conceptNodesCrud.fetchAll()
-      const userNodes = existingNodes.filter((node) => node.owner_id === user.id)
+      // 2. Immediately insert baseline paper node so the UI remains reactive
+      await conceptNodesCrud.insertRecord({
+        owner_id: user.id,
+        document_id: insertedRow.id,
+        node_type: "paper",
+        label: insertedRow.title,
+      })
 
-      let determinedType: ConceptNodeType = "paper"
-      if (userNodes.length > 0) {
+      // Pull fresh local records to display the newly added node right away
+      await loadUserDocuments()
+      if (onNodesUpdated) {
+        onNodesUpdated()
+      }
+
+      // 3. SLIDING TIMER DEBOUNCE BLOCK FOR AI COMPUTE
+      // Clear any pending layout organization timers because a new upload occurred
+      if (organizationalTimerRef.current) {
+        console.log("Resetting 30s background AI window due to active file upload activity...")
+        clearTimeout(organizationalTimerRef.current)
+      }
+
+      // Spin up a delayed job to prevent 429 quota exhaustion
+      organizationalTimerRef.current = setTimeout(async () => {
+        console.log("User inactive for 30s. Starting deferred background graph analysis...")
+        
         try {
+          const existingNodes = await conceptNodesCrud.fetchAll()
+          const userNodes = existingNodes.filter((node) => node.owner_id === user.id)
+
+          // Make sure there are companion literature nodes to actually analyze links against
+          if (userNodes.length <= 1) return
+
           const decisions = await postAnalyzeDependencies({
             newDoc: {
               title: insertedRow.title,
               keywords: detectedKeywords,
-              textSnippet: realExtractedText.length > 2500 
-                ? realExtractedText.slice(300, 2500)
-                : realExtractedText,
+              textSnippet: realExtractedText.length > 2300 
+                ? realExtractedText.slice(300, 2300)
+                : realExtractedText.slice(300),
             },
             existingNodes: userNodes.map((node) => {
-              const matchedDoc = documents.find((d) => d.id === node.document_id);
-              const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || "";
+              const matchedDoc = documents.find((d) => d.id === node.document_id)
+              const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || ""
               return {
                 id: node.id,
                 label: node.label,
                 node_type: node.node_type,
                 keywords: matchedDoc?.keywords || [],
                 summary: cachedSummary || matchedDoc?.extracted_text?.slice(0, 500) || "",
-              };
+              } as any
             }),
           })
 
-          determinedType = decisions.newNodeType
-          
-
+          // Retroactively update nodes that the target new document reconfigured
           for (const legacyUpdate of decisions.updatedExistingNodes) {
-          const validatedUpdate = (legacyUpdate as unknown) as z.infer<typeof nodeTypeUpdateSchema>;            
-          await conceptNodesCrud.updateById(legacyUpdate.id, {
+            const validatedUpdate = (legacyUpdate as unknown) as z.infer<typeof nodeTypeUpdateSchema>
+            await conceptNodesCrud.updateById(legacyUpdate.id, {
               node_type: validatedUpdate.node_type,
             })
           }
+
+          // Update the type parameters of the newly inserted document node itself
+          const freshNodesList = await conceptNodesCrud.fetchAll()
+          const targetUploadedNode = freshNodesList.find((n) => n.document_id === insertedRow.id)
+          if (targetUploadedNode && decisions.newNodeType !== "paper") {
+            await conceptNodesCrud.updateById(targetUploadedNode.id, {
+              node_type: decisions.newNodeType,
+            })
+          }
+
+          // Pull down absolute final database states to synchronise canvas positions
+          await loadUserDocuments()
+          if (onNodesUpdated) {
+            onNodesUpdated()
+          }
+          console.log("AI background graph layout optimization complete.")
         } catch (aiError) {
-          console.error("AI dependency analysis failed, defaulting to paper node:", aiError)
+          console.error("AI background dependency analysis failed safely in window handler:", aiError)
         }
-      }
+      }, 30000) // 30,000 milliseconds = 30 second delay window
 
-      await conceptNodesCrud.insertRecord({
-        owner_id: user.id,
-        document_id: insertedRow.id,
-        node_type: determinedType,
-        label: insertedRow.title,
-      })
-
-      setDocuments((prev) => [insertedRow, ...prev])
-      setActiveDoc(insertedRow)
-
-      if (onNodesUpdated) {
-        onNodesUpdated()
-      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during document integration."
       setErrorMsg(message)
@@ -308,7 +346,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
-
+  
   const executeChatStream = async (promptText: string) => {
     if (!activeDoc || sendingChat) return
 
