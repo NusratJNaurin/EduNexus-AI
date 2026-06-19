@@ -32,7 +32,7 @@ export const analyzeDependenciesRequestSchema = z.object({
 
 export const nodeTypeUpdateSchema = z.object({
   id: z.string().uuid(),
-  updatedType: conceptNodeTypeSchema,
+  node_type: conceptNodeTypeSchema,
 })
 
 export const analyzeDependenciesResponseSchema = z.object({

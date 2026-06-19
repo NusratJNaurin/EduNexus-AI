@@ -21,6 +21,12 @@ import { postAnalyzeDependencies, postChat, postSummarize } from "@/lib/api-clie
 import { usePersistedMessages } from "@/hooks/use-api"
 import type { ChatMessage, ConceptNodeType, ResearchDocumentRow } from "@/lib/types"
 import { PdfVisualViewer } from "./PdfVisualViewer"
+import { z } from "zod"
+import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
+
+export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
+
+interface DocumentStudioProps { onNodesUpdated?: () => void}
 
 function detectKeywords(text: string): string[] {
   const lowerText = text.toLowerCase()
@@ -51,7 +57,7 @@ function computeComplexityScore(text: string, pageCount: number): number {
   return parseFloat(Math.min(95, Math.max(45, 50 + density * 2)).toFixed(1))
 }
 
-export function DocumentStudio() {
+export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
   const [activeDoc, setActiveDoc] = useState<ResearchDocumentRow | null>(null)
   const [loadingDocs, setLoadingDocs] = useState(true)
@@ -176,6 +182,10 @@ export function DocumentStudio() {
         }
         return remaining
       })
+
+      if (onNodesUpdated) {
+        onNodesUpdated()
+      }
     } catch (err) {
       console.error("Failed to delete document:", err)
     } finally {
@@ -199,7 +209,7 @@ export function DocumentStudio() {
       if (authError || !user) throw new Error("Authentication context not found. Please log in again.")
 
       let realExtractedText = ""
-      let totalPages = 1
+      let totalPages = 0
 
       if (file.type === "application/pdf") {
         const pdfData = await extractTextFromPdf(file)
@@ -255,10 +265,12 @@ export function DocumentStudio() {
           })
 
           determinedType = decisions.newNodeType
+          
 
           for (const legacyUpdate of decisions.updatedExistingNodes) {
-            await conceptNodesCrud.updateById(legacyUpdate.id, {
-              node_type: legacyUpdate.updatedType,
+          const validatedUpdate = (legacyUpdate as unknown) as z.infer<typeof nodeTypeUpdateSchema>;            
+          await conceptNodesCrud.updateById(legacyUpdate.id, {
+              node_type: validatedUpdate.node_type,
             })
           }
         } catch (aiError) {
@@ -275,6 +287,10 @@ export function DocumentStudio() {
 
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
+
+      if (onNodesUpdated) {
+        onNodesUpdated()
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during document integration."
       setErrorMsg(message)

@@ -29,7 +29,7 @@ ${JSON.stringify(
   existingNodes.map((node) => ({
     id: node.id,
     label: node.label,
-    current_type: node.node_type,
+    node_type: node.node_type,
   })),
 )}
 
@@ -44,7 +44,8 @@ Return your analysis strictly as a JSON object matching this schema:
 {
   "newNodeType": "paper" | "prerequisite" | "research_gap",
   "updatedExistingNodes": [
-    { "id": "string", "updatedType": "paper" | "prerequisite" | "research_gap" }
+    { "id": "string", 
+     "node_type": "paper" | "prerequisite" | "research_gap" }
   ]
 }`
 
