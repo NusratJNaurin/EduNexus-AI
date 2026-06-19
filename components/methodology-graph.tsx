@@ -94,8 +94,8 @@ export function MethodologyGraph() {
         .map((item, idx) => ({
           id: item.id,
           owner_id: item.owner_id,
-          x: item.x ?? (Math.cos(idx * 2.4) * (idx * 45)), // 250 is the center X
-          y: item.y ?? (Math.sin(idx * 2.4) * (idx * 35)), // 200 is the center Y
+          x: item.x ?? (Math.cos(idx * 2.4) * (idx * 45)+30), // 250 is the center X
+          y: item.y ?? (Math.sin(idx * 2.4) * (idx * 35)+20), // 200 is the center Y
           label: item.label || "Unnamed Concept Parameter",
           node_type: item.node_type || "paper",
           viva_feedback: item.viva_feedback || [] 
