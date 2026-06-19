@@ -17,8 +17,6 @@
 <!-- Replace the placeholder below with your deployed screenshot -->
 ![EduNexus AI — Document Studio, Methodology Graph, and Teacher Portal](./docs/screenshot-placeholder.png)
 
-> **Tip:** Add a screenshot of the Document Interaction Studio or Methodology Graph Workspace to `docs/screenshot-placeholder.png`, then update the path above.
-
 ---
 
 ## Core Features
