@@ -1,57 +1,42 @@
-import { NextResponse } from "next/server"
+import { generateText } from "@/lib/api/gemini"
+import { getErrorMessage, jsonError, jsonOk } from "@/lib/api/response"
+import { chatRequestSchema, parseJsonBody } from "@/lib/api/validation"
+
+const SYSTEM_INSTRUCTIONS = `You are an advanced academic research assistant.
+You are assisting a student working with a document asset.
+CRITICAL BEHAVIORAL DIRECTIVES:
+1. Answer the user's prompt directly, clearly, and concisely.
+2. Strictly confine your analysis to the provided Document Text and Active Node Context. Do not bring in unrequested outside concepts.
+3. Do not anticipate future questions, do not offer unprompted extra context, and do not hallucinate adjacent metrics.
+4. If the user asks a short question, provide a precise, crisp answer. No fluff.
+5. When citing evidence, reference specific passages or sections from the document text.`
 
 export async function POST(request: Request) {
   try {
-    const { prompt, formulaContext, documentText } = await request.json()
+    const { prompt, documentText, formulaContext } = await parseJsonBody(request, chatRequestSchema)
 
-    // 1. Build the specific system framework instructions
-    const systemInstructions = `You are an advanced academic research assistant. 
-    You are assisting a student working with a document asset.
-    The student will ask you questions about the document, and you should answer based on the content of the document and your general knowledge.
-    CRITICAL BEHAVIORAL DIRECTIVES:
-    1. Answer the user's prompt directly, clearly, and concisely. 
-    2. Strictly confine your analysis to the provided Document Text and Active Node Context. Do not bring in unrequested outside concepts.
-    3. Do not anticipate future questions, do not offer unprompted extra context, and do not hallucinate adjacent metrics. 
-    4. If the user asks a short question, provide a precise, crisp answer. No fluff.`
+    const boundedDocumentText = documentText?.slice(0, 12000) ?? "No document text was provided."
+    const boundedContext = formulaContext?.slice(0, 8000) ?? "No additional node context was provided."
 
-    // 2. Fetch from the official Gemini 1.5 Flash endpoint
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
+    const composedPrompt = `${SYSTEM_INSTRUCTIONS}
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { 
-            role: "user",
-            parts: [{ text: prompt }] 
-          }
-        ],
-        systemInstruction: {
-          parts: [{ text: systemInstructions }]
-        }
-      })
-    })
+DOCUMENT TEXT:
+${boundedDocumentText}
 
-    const data = await response.json()
+ACTIVE NODE / FORMULA CONTEXT:
+${boundedContext}
 
-    // Handle API level errors (e.g., bad key, blocked content)
-    if (!response.ok) {
-      console.error("Gemini API Error Payload:", data)
-      return NextResponse.json({ error: data.error?.message || "Gemini engine error" }, { status: response.status })
+USER QUESTION:
+${prompt}`
+
+    const reply = await generateText(composedPrompt)
+    if (!reply) {
+      return jsonOk({ reply: "The model processed the request but returned an empty response." })
     }
 
-    // 3. Extract the text safely via the exact plural JSON schema paths
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (!replyText) {
-      return NextResponse.json({ reply: "The model processed the request but returned an empty structural chunk." })
-    }
-
-    return NextResponse.json({ reply: replyText })
-
-  } catch (error: any) {
-    console.error("API Route Pipeline Crash:", error)
-    return NextResponse.json({ error: error.message || "Pipeline failure" }, { status: 500 })
+    return jsonOk({ reply })
+  } catch (error) {
+    console.error("Chat API error:", error)
+    return jsonError(getErrorMessage(error), error instanceof Error && error.message.includes("configured") ? 503 : 400)
   }
 }

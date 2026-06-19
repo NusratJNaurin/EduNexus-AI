@@ -14,49 +14,13 @@ import {
   Users,
 } from "lucide-react"
 import { classSectionsCrud, profilesCrud, researchDocumentsCrud, sectionEnrollmentsCrud } from "@/lib/crud"
-
-type ProfileRow = {
-  id: string
-  full_name: string | null
-  qu_email: string
-  role: string | null
-}
-
-type ResearchDocumentRow = {
-  id: string
-  owner_id: string
-  title: string
-  file_name: string | null
-  file_url: string | null
-  file_size_bytes: number | null
-  page_count: number | null
-  extracted_text: string | null
-  keywords: string[]
-  readability_score: number | null
-  complexity_score: number | null
-  methodology_latex: string | null
-  created_at: string
-  updated_at: string
-}
-
-type SectionRow = {
-  id: string
-  instructor_id: string
-  course_code: string
-  section_number: string
-  invite_code: string
-  created_at: string
-  updated_at: string
-}
-
-type SectionEnrollmentRow = {
-  id: string
-  section_id: string
-  student_id: string
-  invite_code: string
-  joined_at: string
-  updated_at?: string
-}
+import type {
+  ClassSectionRow,
+  ProfileRow,
+  ResearchDocumentRow,
+  SectionEnrollmentRow,
+} from "@/lib/types"
+import { normalizeRole } from "@/lib/types"
 
 type StudentCardRow = {
   id: string
@@ -72,10 +36,6 @@ type StudentCardRow = {
   badgeClass: string
   progressClass: string
   documents: ResearchDocumentRow[]
-}
-
-function normalizeRole(role: string | null | undefined) {
-  return role?.trim().toLowerCase() ?? ""
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -127,6 +87,20 @@ function formatTimestamp(value: string | null | undefined) {
   })
 }
 
+function escapeCsvCell(value: string | number): string {
+  return `"${String(value).replace(/"/g, '""')}"`
+}
+
+function downloadFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
 function StatCard({
   label,
   value,
@@ -158,7 +132,7 @@ export function TeacherPortal({
   profileRole: string | null
   profileName: string | null
 }) {
-  const [sections, setSections] = useState<SectionRow[]>([])
+  const [sections, setSections] = useState<ClassSectionRow[]>([])
   const [activeSectionId, setActiveSectionId] = useState("")
   const [newCourseCode, setNewCourseCode] = useState("")
   const [newSectionNumber, setNewSectionNumber] = useState("")
@@ -199,18 +173,19 @@ export function TeacherPortal({
           return
         }
 
-        const mappedSections = (sectionRows as SectionRow[])
+        const mappedSections = sectionRows
           .filter((section) => section.instructor_id === profileId)
           .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
         setSections(mappedSections)
-        setProfiles(profileRows as ProfileRow[])
-        setDocuments(documentRows as ResearchDocumentRow[])
-        setEnrollments(enrollmentRows as SectionEnrollmentRow[])
+        setProfiles(profileRows)
+        setDocuments(documentRows)
+        setEnrollments(enrollmentRows)
         setActiveSectionId((current) => (mappedSections.some((section) => section.id === current) ? current : mappedSections[0]?.id ?? ""))
-      } catch (loadError: any) {
+      } catch (loadError) {
         if (isMounted) {
-          setError(loadError?.message || "Failed to load the live faculty workspace.")
+          const message = loadError instanceof Error ? loadError.message : "Failed to load the live faculty workspace."
+          setError(message)
         }
       } finally {
         if (isMounted) {
@@ -329,6 +304,60 @@ export function TeacherPortal({
 
   const sectionLabel = activeSection ? `${activeSection.course_code} · Sec ${activeSection.section_number}` : "No active section"
 
+  const handleExportCsv = () => {
+    if (studentCards.length === 0) {
+      setError("No student records are available to export.")
+      return
+    }
+
+    const headers = ["Name", "Email", "Section", "Sessions", "Last Active", "Active Reading", "Engagement", "Status"]
+    const rows = studentCards.map((student) => [
+      student.name,
+      student.email,
+      student.sections,
+      student.sessions,
+      student.lastActive,
+      student.read,
+      student.engagementLabel,
+      student.status,
+    ])
+
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsvCell).join(",")).join("\n")
+    const filename = `edunexus-performance-${activeSection?.course_code ?? "section"}-${new Date().toISOString().slice(0, 10)}.csv`
+    downloadFile(filename, csv, "text/csv;charset=utf-8")
+  }
+
+  const handleExportJson = () => {
+    const auditTrail = {
+      exportedAt: new Date().toISOString(),
+      instructor: profileName,
+      section: activeSection,
+      metrics,
+      students: studentCards.map((student) => ({
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        sections: student.sections,
+        sessions: student.sessions,
+        lastActive: student.lastActive,
+        read: student.read,
+        engagement: student.engagement,
+        status: student.status,
+        documents: student.documents.map((document) => ({
+          id: document.id,
+          title: document.title,
+          pageCount: document.page_count,
+          readabilityScore: document.readability_score,
+          complexityScore: document.complexity_score,
+          updatedAt: document.updated_at,
+        })),
+      })),
+    }
+
+    const filename = `edunexus-audit-${activeSection?.course_code ?? "section"}-${new Date().toISOString().slice(0, 10)}.json`
+    downloadFile(filename, JSON.stringify(auditTrail, null, 2), "application/json")
+  }
+
   const handleGenerateInviteCode = () => {
     if (!newCourseCode.trim() || !newSectionNumber.trim()) {
       setError("Enter both a course code and section number before generating an invite code.")
@@ -358,20 +387,21 @@ export function TeacherPortal({
       setLoading(true)
       setError("")
 
-      const createdSection = (await classSectionsCrud.insertRecord({
+      const createdSection = await classSectionsCrud.insertRecord({
         instructor_id: profileId,
         course_code: courseCode,
         section_number: sectionNumber,
         invite_code: inviteCode,
-      })) as SectionRow
+      })
 
       setSections((current) => [createdSection, ...current.filter((section) => section.id !== createdSection.id)])
       setActiveSectionId(createdSection.id)
       setInviteCodeDraft(inviteCode)
       setNewCourseCode("")
       setNewSectionNumber("")
-    } catch (createError: any) {
-      setError(createError?.message || "Could not create the section.")
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : "Could not create the section."
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -555,11 +585,22 @@ export function TeacherPortal({
           <p className="text-xs text-muted-foreground">Faculty analytics remain grounded in the live Supabase roster.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={studentCards.length === 0}
+            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <FileSpreadsheet className="size-4" />
             Export Performance Matrix (CSV)
           </Button>
-          <Button variant="outline" className="gap-2 border-accent text-accent-foreground">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportJson}
+            disabled={studentCards.length === 0}
+            className="gap-2 border-accent text-accent-foreground"
+          >
             <FileJson className="size-4" />
             Export JSON Audit Trail
           </Button>

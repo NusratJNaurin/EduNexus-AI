@@ -2,64 +2,85 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { 
-  Mic, 
-  MicOff, 
-  Radio, 
-  CircleDot, 
-  FileText, 
-  Lightbulb, 
-  Layers, 
-  Sparkles, 
-  Highlighter, 
-  Send, 
+import {
+  Mic,
+  MicOff,
+  Radio,
+  CircleDot,
+  FileText,
+  Lightbulb,
+  Layers,
+  Sparkles,
+  Highlighter,
+  Send,
   Loader2,
   X,
-  Info 
+  Info,
 } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud } from "@/lib/crud"
+import { postChat, postViva } from "@/lib/api-client"
+import type { ConceptNodeRow, ConceptNodeType, VivaFeedbackItem } from "@/lib/types"
+import { parseVivaFeedback, serializeVivaFeedback } from "@/lib/types"
 
-type FeedbackItem = {
-  t: string
-  q: boolean
-  text: string
-}
-
-type Node = {
+interface GraphNode {
   id: string
   owner_id: string
   x: number
   y: number
   label: string
-  node_type: "paper" | "prerequisite" | "research_gap"
-  viva_feedback?: FeedbackItem[]
+  node_type: ConceptNodeType
+  viva_feedback: VivaFeedbackItem[]
 }
 
-type DocumentRow = {
-  id: string
-  title: string
+const CANVAS_WIDTH = 800
+const CANVAS_HEIGHT = 600
+const CANVAS_PADDING = 60
+const CANVAS_CX = CANVAS_WIDTH / 2
+const CANVAS_CY = CANVAS_HEIGHT / 2
+const NODE_SPACING = 150
+
+function mapConceptNodeToGraphNode(item: ConceptNodeRow, index: number): GraphNode {
+  return {
+    id: item.id,
+    owner_id: item.owner_id,
+    x:
+      item.position_x ||
+      (index === 0
+        ? CANVAS_CX
+        : Math.min(
+            CANVAS_WIDTH - CANVAS_PADDING,
+            Math.max(CANVAS_PADDING, CANVAS_CX + Math.cos(index * 2.4) * (Math.sqrt(index) * NODE_SPACING)),
+          )),
+    y:
+      item.position_y ||
+      (index === 0
+        ? CANVAS_CY
+        : Math.min(
+            CANVAS_HEIGHT - CANVAS_PADDING,
+            Math.max(CANVAS_PADDING, CANVAS_CY + Math.sin(index * 2.4) * (Math.sqrt(index) * NODE_SPACING)),
+          )),
+    label: item.label || "Unnamed Concept Parameter",
+    node_type: item.node_type,
+    viva_feedback: parseVivaFeedback(item.viva_feedback),
+  }
 }
 
 export function MethodologyGraph() {
-  const [nodes, setNodes] = useState<Node[]>([])
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [nodes, setNodes] = useState<GraphNode[]>([])
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [loading, setLoading] = useState(true)
-  const [documents, setDocuments] = useState<DocumentRow[]>([])
-  const [activeDoc, setActiveDoc] = useState<DocumentRow | null>(null)
-  
   const [recording, setRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  
-  const [messages, setMessages] = useState<{ id: string; text: string; isUser: boolean }[]>([
-    { id: "init", text: "Welcome to the Methodology Graph Workspace terminal. Select a concept node or interact below.", isUser: false }
+
+  const [messages, setMessages] = useState<Array<{ id: string; text: string; isUser: boolean }>>([
+    {
+      id: "init",
+      text: "Welcome to the Methodology Graph Workspace terminal. Select a concept node or interact below.",
+      isUser: false,
+    },
   ])
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
@@ -69,42 +90,28 @@ export function MethodologyGraph() {
   const [newAnswer, setNewAnswer] = useState("")
   const [savingScore, setSavingScore] = useState(false)
 
-  const width = 800;  
-  const height = 600; 
-  const padding = 60; 
-  const cx = width / 2;
-  const cy = height / 2;
-  const spacing = 150;
-
   useEffect(() => {
-    fetchGraphData()
+    void fetchGraphData()
   }, [])
 
   const fetchGraphData = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
 
-      const allRecords = await conceptNodesCrud.fetchAll() as any[]
-      
-      const userNodes: Node[] = allRecords
+      const allRecords = await conceptNodesCrud.fetchAll()
+      const userNodes = allRecords
         .filter((item) => item.owner_id === user.id)
-        .map((item, idx) => ({
-          id: item.id,
-          owner_id: item.owner_id,
-          x: item.x ?? (idx === 0 ? cx : Math.min(width - padding, Math.max(padding, cx + Math.cos(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
-          y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy + Math.sin(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
-          label: item.label || "Unnamed Concept Parameter",
-          node_type: item.node_type || "paper",
-          viva_feedback: item.viva_feedback || [] 
-        }))
+        .map((item, index) => mapConceptNodeToGraphNode(item, index))
 
       setNodes(userNodes)
       if (userNodes.length > 0) {
         setSelectedNode((prev) => {
-          const fresh = userNodes.find((n) => n.id === prev?.id)
-          return fresh || userNodes[0]
+          const fresh = userNodes.find((node) => node.id === prev?.id)
+          return fresh ?? userNodes[0]
         })
       }
     } catch (err) {
@@ -118,7 +125,7 @@ export function MethodologyGraph() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
-      
+
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -131,7 +138,7 @@ export function MethodologyGraph() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
         await handleProcessAudioDefense(audioBlob)
-        stream.getTracks().forEach(track => track.stop())
+        stream.getTracks().forEach((track) => track.stop())
       }
 
       mediaRecorder.start()
@@ -152,19 +159,19 @@ export function MethodologyGraph() {
     if (!selectedNode) return
 
     const loadingTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    
-    setNodes(prevNodes => prevNodes.map(n => {
-      if (n.id === selectedNode.id) {
+
+    setNodes((prevNodes) =>
+      prevNodes.map((node) => {
+        if (node.id !== selectedNode.id) return node
         return {
-          ...n,
+          ...node,
           viva_feedback: [
-            ...(n.viva_feedback || []),
-            { t: loadingTimestamp, q: true, text: "Processing your audio response..." }
-          ]
+            ...node.viva_feedback,
+            { t: loadingTimestamp, q: true, text: "Processing your audio response..." },
+          ],
         }
-      }
-      return n
-    }))
+      }),
+    )
 
     try {
       const formData = new FormData()
@@ -172,25 +179,18 @@ export function MethodologyGraph() {
       formData.append("nodeLabel", selectedNode.label)
       formData.append("nodeType", selectedNode.node_type)
 
-      const response = await fetch("/api/viva", {
-        method: "POST",
-        body: formData
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed extraction")
-
-      const currentLogs = selectedNode.viva_feedback || []
+      const data = await postViva(formData)
+      const currentLogs = selectedNode.viva_feedback
       const finalTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      
-      const updatedLogs: FeedbackItem[] = [
-        ...currentLogs.filter(log => log.text !== "Processing your audio response..."),
+
+      const updatedLogs: VivaFeedbackItem[] = [
+        ...currentLogs.filter((log) => log.text !== "Processing your audio response..."),
         { t: finalTimestamp, q: true, text: data.transcription || "Audio recorded successfully." },
-        { t: finalTimestamp, q: false, text: data.evaluation || "Evaluation could not compile." }
+        { t: finalTimestamp, q: false, text: data.evaluation || "Evaluation could not compile." },
       ]
 
       await conceptNodesCrud.updateById(selectedNode.id, {
-        viva_feedback: updatedLogs
+        viva_feedback: serializeVivaFeedback(updatedLogs),
       })
 
       await fetchGraphData()
@@ -201,7 +201,7 @@ export function MethodologyGraph() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim()) return
+    if (!chatInput.trim() || sendingChat) return
 
     const userMsg = { id: String(Date.now()), text: chatInput, isUser: true }
     setMessages((prev) => [...prev, userMsg])
@@ -210,61 +210,76 @@ export function MethodologyGraph() {
 
     const loadingId = "loading-placeholder"
     setMessages((prev) => [...prev, { id: loadingId, text: "Consulting AI model engine...", isUser: false }])
+    setSendingChat(true)
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: promptSnapshot,
-          formulaContext: selectedNode ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}` : "No specific node selected"
-        }),
+      const data = await postChat({
+        prompt: promptSnapshot,
+        formulaContext: selectedNode
+          ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}`
+          : "No specific node selected",
       })
 
-      const data = await response.json()
-
-      setMessages((prev) => 
-        prev.filter((m) => m.id !== loadingId).concat({
-          id: String(Date.now()),
-          text: data.reply || "Command executed.",
-          isUser: false
-        })
+      setMessages((prev) =>
+        prev
+          .filter((message) => message.id !== loadingId)
+          .concat({
+            id: String(Date.now()),
+            text: data.reply || "Command executed.",
+            isUser: false,
+          }),
       )
     } catch (err) {
-      setMessages((prev) => 
-        prev.filter((m) => m.id !== loadingId).concat({
-          id: String(Date.now()),
-          text: "Could not connect to the server edge pipeline.",
-          isUser: false
-        })
+      const message = err instanceof Error ? err.message : "Could not connect to the server edge pipeline."
+      setMessages((prev) =>
+        prev
+          .filter((item) => item.id !== loadingId)
+          .concat({
+            id: String(Date.now()),
+            text: message,
+            isUser: false,
+          }),
       )
+    } finally {
+      setSendingChat(false)
     }
   }
 
   const executeChatStream = async (customPrompt: string) => {
+    if (sendingChat) return
+
     setSendingChat(true)
     const placeholderId = String(Date.now())
     setMessages((prev) => [...prev, { id: placeholderId, text: "Streaming engine prompts...", isUser: false }])
-    
+
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: customPrompt,
-          formulaContext: selectedNode ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}` : "No specific node selected"
-        })
+      const data = await postChat({
+        prompt: customPrompt,
+        formulaContext: selectedNode
+          ? `Context Node Label: ${selectedNode.label}. Type: ${selectedNode.node_type}`
+          : "No specific node selected",
       })
-      const data = await response.json()
-      setMessages((prev) => 
-        prev.filter((m) => m.id !== placeholderId).concat({
-          id: String(Date.now()),
-          text: data.reply || "Socratic nodes updated successfully.",
-          isUser: false
-        })
+
+      setMessages((prev) =>
+        prev
+          .filter((message) => message.id !== placeholderId)
+          .concat({
+            id: String(Date.now()),
+            text: data.reply || "Socratic nodes updated successfully.",
+            isUser: false,
+          }),
       )
     } catch (err) {
-      console.error("Failed to execute graph-targeted chat stream:", err)
+      const message = err instanceof Error ? err.message : "Failed to execute graph-targeted chat stream."
+      setMessages((prev) =>
+        prev
+          .filter((item) => item.id !== placeholderId)
+          .concat({
+            id: String(Date.now()),
+            text: message,
+            isUser: false,
+          }),
+      )
     } finally {
       setSendingChat(false)
     }
@@ -276,26 +291,25 @@ export function MethodologyGraph() {
 
     setSavingScore(true)
     try {
-      const currentLogs = selectedNode.viva_feedback || []
+      const currentLogs = selectedNode.viva_feedback
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      
-      const updatedLogs: FeedbackItem[] = [
+
+      const updatedLogs: VivaFeedbackItem[] = [
         ...currentLogs,
         { t: timestamp, q: true, text: newQuestion },
-        { t: timestamp, q: false, text: newAnswer }
+        { t: timestamp, q: false, text: newAnswer },
       ]
 
       await conceptNodesCrud.updateById(selectedNode.id, {
-        viva_feedback: updatedLogs
+        viva_feedback: serializeVivaFeedback(updatedLogs),
       })
 
       await fetchGraphData()
-      
       setNewQuestion("")
       setNewAnswer("")
       setShowScoreModal(false)
     } catch (err) {
-      console.error("Error updating viva evaluation log entry matrix:", err)
+      console.error("Error updating viva evaluation log entry:", err)
     } finally {
       setSavingScore(false)
     }
@@ -305,8 +319,6 @@ export function MethodologyGraph() {
     <TooltipProvider>
       <div className="space-y-4 p-4 lg:p-5 w-full check-layout">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] items-stretch">
-          
-          {/* LEFT CANVAS WORKSPACE AREA CONTAINER */}
           <section className="relative min-h-[78vh] flex-1 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-sm">
             <div className="flex items-center justify-between border-b border-border p-3 bg-card">
               <div className="flex items-center gap-2">
@@ -328,20 +340,22 @@ export function MethodologyGraph() {
               ) : nodes.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-muted-foreground text-xs">
                   <p className="font-semibold">No methodology concept nodes processed.</p>
-                  <p className="max-w-xs mt-1 text-muted-foreground/70">Upload structural text assets to Document Interaction Studio to trigger model vector nodes.</p>
+                  <p className="max-w-xs mt-1 text-muted-foreground/70">
+                    Upload structural text assets to Document Interaction Studio to trigger model vector nodes.
+                  </p>
                 </div>
               ) : (
                 <>
                   <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
-                    {nodes.map((node, i) => {
-                      if (i === 0) return null
-                      const parentNode = nodes[i - 1]
+                    {nodes.map((node, index) => {
+                      if (index === 0) return null
+                      const parentNode = nodes[index - 1]
                       return (
                         <line
                           key={`edge-${node.id}`}
-                          x1={parentNode.x} 
-                          y1={parentNode.y} 
-                          x2={node.x} 
+                          x1={parentNode.x}
+                          y1={parentNode.y}
+                          x2={node.x}
                           y2={node.y}
                           stroke="var(--color-border)"
                           strokeWidth={2}
@@ -351,32 +365,32 @@ export function MethodologyGraph() {
                     })}
                   </svg>
 
-                  {nodes.map((n) => {
-                    const isSelected = selectedNode?.id === n.id
-                    const Icon = n.node_type === "paper" ? FileText : n.node_type === "prerequisite" ? Layers : Lightbulb
+                  {nodes.map((node) => {
+                    const isSelected = selectedNode?.id === node.id
+                    const Icon = node.node_type === "paper" ? FileText : node.node_type === "prerequisite" ? Layers : Lightbulb
                     return (
                       <button
-                        key={n.id}
+                        key={node.id}
                         type="button"
-                        onClick={() => setSelectedNode(n)}
+                        onClick={() => setSelectedNode(node)}
                         className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95"
-                        style={{ left: `${n.x}px`, top: `${n.y}px`, zIndex: isSelected ? 30 : 10 }}
+                        style={{ left: `${node.x}px`, top: `${node.y}px`, zIndex: isSelected ? 30 : 10 }}
                       >
                         <div
                           className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
-                            isSelected 
-                              ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105" 
+                            isSelected
+                              ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
                               : "hover:scale-105"
                           } ${
-                            n.node_type === "paper"
+                            node.node_type === "paper"
                               ? "bg-primary text-primary-foreground border-primary"
-                              : n.node_type === "prerequisite"
+                              : node.node_type === "prerequisite"
                                 ? "bg-accent text-accent-foreground border-accent"
                                 : "border-2 border-dashed border-accent bg-card text-foreground"
                           }`}
                         >
                           <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                          <span className="leading-tight text-left truncate max-w-[120px]">{n.label}</span>
+                          <span className="leading-tight text-left truncate max-w-[120px]">{node.label}</span>
                         </div>
                       </button>
                     )
@@ -386,7 +400,6 @@ export function MethodologyGraph() {
             </div>
           </section>
 
-          {/* RIGHT SIDEBAR INTERACTIVE LOGGER PANEL */}
           <section className="flex flex-col gap-4 h-full min-h-[78vh]">
             <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground shadow-sm shrink-0">
               <div className="flex items-center justify-between">
@@ -400,25 +413,29 @@ export function MethodologyGraph() {
                   </span>
                 )}
               </div>
-              
+
               <div className="mt-4 flex flex-col items-center gap-3">
                 <button
                   type="button"
                   disabled={!selectedNode}
                   onClick={recording ? stopRecording : startRecording}
                   className={`relative flex size-20 items-center justify-center rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                    recording ? "bg-accent text-accent-foreground shadow-lg" : "bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20"
+                    recording
+                      ? "bg-accent text-accent-foreground shadow-lg"
+                      : "bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20"
                   }`}
                 >
-                  {recording && (
-                    <span className="absolute inline-flex size-20 animate-ping rounded-full bg-accent opacity-30" />
-                  )}
+                  {recording && <span className="absolute inline-flex size-20 animate-ping rounded-full bg-accent opacity-30" />}
                   {recording ? <Mic className="size-8" /> : <MicOff className="size-8" />}
                 </button>
-                
+
                 <div className="flex items-center gap-2 text-[11px] font-medium">
                   <CircleDot className={`size-3.5 ${recording ? "text-accent animate-pulse" : "text-primary-foreground/40"}`} />
-                  {recording ? "Streaming Defense Audio · Live" : !selectedNode ? "Select a node to begin defense" : "Microphone Idle Context"}
+                  {recording
+                    ? "Streaming Defense Audio · Live"
+                    : !selectedNode
+                      ? "Select a node to begin defense"
+                      : "Microphone Idle Context"}
                 </div>
               </div>
             </div>
@@ -437,7 +454,11 @@ export function MethodologyGraph() {
                     size="sm"
                     variant="outline"
                     disabled={sendingChat}
-                    onClick={() => executeChatStream(`Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions targeting the methodology parameters, experimental bounds, and core assumptions for the current highlighted node: "${selectedNode.label}" (${selectedNode.node_type}).`)}
+                    onClick={() =>
+                      void executeChatStream(
+                        `Act as an expert academic board examiner. Generate 3 rigorous, highly specific Viva defense questions targeting the methodology parameters, experimental bounds, and core assumptions for the current highlighted node: "${selectedNode.label}" (${selectedNode.node_type}).`,
+                      )
+                    }
                     className="text-xs gap-1.5 h-8 font-medium hover:bg-emerald-50/50 hover:text-emerald-600 hover:border-emerald-200 transition-colors shrink-0"
                   >
                     <Sparkles className="size-3.5 text-emerald-500" />
@@ -445,7 +466,10 @@ export function MethodologyGraph() {
                   </Button>
                 </div>
                 <div className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 border border-border/50">
-                  <span className="font-semibold text-foreground">How it works:</span> Fire deep academic structural scrutiny regarding <span className="font-mono bg-background px-1 rounded border text-foreground">{selectedNode.label}</span> directly into the communication terminal framework below.
+                  <span className="font-semibold text-foreground">How it works:</span> Fire deep academic structural scrutiny
+                  regarding{" "}
+                  <span className="font-mono bg-background px-1 rounded border text-foreground">{selectedNode.label}</span>{" "}
+                  directly into the communication terminal framework below.
                 </div>
               </div>
             )}
@@ -457,16 +481,16 @@ export function MethodologyGraph() {
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[320px]">
-                {messages.map((m) => (
-                  <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
+                {messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
                     <div
                       className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
-                        m.isUser
+                        message.isUser
                           ? "bg-primary text-primary-foreground rounded-br-sm"
                           : "border border-border bg-background text-foreground rounded-tl-sm shadow-sm"
                       }`}
                     >
-                      {m.text}
+                      {message.text}
                     </div>
                   </div>
                 ))}
@@ -488,7 +512,6 @@ export function MethodologyGraph() {
           </section>
         </div>
 
-        {/* INTERACTIVE DIALOG MODAL BOX */}
         {showScoreModal && selectedNode && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl space-y-4">
@@ -497,8 +520,8 @@ export function MethodologyGraph() {
                   <h4 className="text-sm font-semibold text-foreground truncate">Score Defense Response</h4>
                   <p className="text-xs text-muted-foreground truncate">Node Matrix: {selectedNode.label}</p>
                 </div>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowScoreModal(false)}
                   className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
                 >
@@ -509,9 +532,7 @@ export function MethodologyGraph() {
               <form onSubmit={handleAddDefenseScore} className="space-y-3">
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <label className="block text-[11px] font-medium text-muted-foreground">
-                      Socratic Query Statement
-                    </label>
+                    <label className="block text-[11px] font-medium text-muted-foreground">Socratic Query Statement</label>
                     <Tooltip>
                       <TooltipTrigger type="button" className="text-muted-foreground hover:text-primary transition-colors">
                         <Info className="size-3" />
@@ -556,17 +577,11 @@ export function MethodologyGraph() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowScoreModal(false)}
-                    className="text-xs"
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowScoreModal(false)} className="text-xs">
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     size="sm"
                     disabled={savingScore || !newQuestion.trim() || !newAnswer.trim()}
                     className="text-xs bg-primary text-primary-foreground hover:bg-primary/90 gap-1"

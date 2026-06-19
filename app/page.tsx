@@ -9,32 +9,8 @@ import { MethodologyGraph } from "@/components/methodology-graph"
 import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
 import { supabase } from "@/lib/supabase"
-
-type ResearchDocumentRow = {
-  id: string
-  owner_id: string
-  title: string
-  file_name: string | null
-  file_url: string | null
-  file_size_bytes: number | null
-  page_count: number | null
-  extracted_text: string | null
-  keywords: string[]
-  readability_score: number | null
-  complexity_score: number | null
-  methodology_latex: string | null
-  created_at: string
-  updated_at: string
-}
-
-type ProfileRow = {
-  id: string
-  full_name: string | null
-  qu_email: string
-  role: string | null
-}
-
-const normalizeRole = (role: string | null | undefined) => role?.trim().toLowerCase() ?? ""
+import type { ProfileRow, UserRole } from "@/lib/types"
+import { normalizeRole } from "@/lib/types"
 
 export default function Page() {
   const router = useRouter()
@@ -42,12 +18,11 @@ export default function Page() {
   const [authed, setAuthed] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<string | null>(null)
-  const [profileRole, setProfileRole] = useState<string | null>(null)
-  
+  const [profileRole, setProfileRole] = useState<UserRole | null>(null)
+
   const authUserIdRef = useRef<string | null>(null)
   const isFaculty = normalizeRole(profileRole) === "faculty"
 
-  // Explicit, intentional global session reset modifier
   const resetWorkspaceState = () => {
     setAuthed(false)
     setProfileId(null)
@@ -56,7 +31,6 @@ export default function Page() {
     setView("access")
   }
 
-  // 1. Monitor Authentication Session Status and Profile Rows
   useEffect(() => {
     let isMounted = true
     let authSubscription: { unsubscribe: () => void } | null = null
@@ -70,7 +44,7 @@ export default function Page() {
           .select("*")
           .eq("id", userId)
           .maybeSingle()
-        
+
         if (!isMounted) return
 
         if (profileError || !profile) {
@@ -80,7 +54,7 @@ export default function Page() {
 
         const parsedProfile = profile as ProfileRow
         const nextRole = normalizeRole(parsedProfile.role)
-        
+
         setProfileId(parsedProfile.id)
         setProfileName(parsedProfile.full_name)
         setProfileRole(nextRole || "student")
@@ -92,7 +66,7 @@ export default function Page() {
           }
           return currentView
         })
-      } catch (error) {
+      } catch {
         if (isMounted) {
           resetWorkspaceState()
         }
@@ -100,7 +74,9 @@ export default function Page() {
     }
 
     const initializeAuthState = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
       if (user?.id) {
         await loadProfile(user.id)
@@ -111,7 +87,6 @@ export default function Page() {
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
         const nextUserId = session?.user?.id ?? null
 
-        // 2. Clear out everything if user signs out or shifts context
         if (event === "SIGNED_OUT" || !nextUserId || (authUserIdRef.current && nextUserId !== authUserIdRef.current)) {
           authUserIdRef.current = nextUserId
           resetWorkspaceState()
@@ -153,7 +128,14 @@ export default function Page() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         {authed && (
-          <Sidebar active={view} onNavigate={handleNavigate} authed={authed} canAccessPortal={isFaculty} name={profileName} role={profileRole} />
+          <Sidebar
+            active={view}
+            onNavigate={handleNavigate}
+            authed={authed}
+            canAccessPortal={isFaculty}
+            name={profileName}
+            role={profileRole}
+          />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
@@ -170,7 +152,7 @@ export default function Page() {
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {view === "access" && (
                 <AccessGate
-                  onAuthed={(role: "student" | "faculty" | "researcher") => {
+                  onAuthed={(role: UserRole) => {
                     setAuthed(true)
                     setProfileRole(role)
                     setView(role === "faculty" ? "portal" : "studio")
@@ -179,7 +161,9 @@ export default function Page() {
               )}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && isFaculty && <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />}
+              {view === "portal" && isFaculty && (
+                <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
+              )}
               {view === "portal" && !isFaculty && (
                 <div className="p-8 text-center text-destructive font-medium">
                   Access Denied: You do not have permission to view the evaluation workspace dashboard.
@@ -189,7 +173,6 @@ export default function Page() {
           </main>
         </div>
       </div>
-
     </div>
   )
 }
