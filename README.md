@@ -8,7 +8,7 @@
 
 ## Live Demo
 
-**Production URL:** `https://your-edunexus-app.vercel.app` *(replace with your deployed Vercel URL)*
+**Production URL:** `https://edunexus-ai-ochre.vercel.app/`
 
 ---
 
@@ -16,8 +16,6 @@
 
 <!-- Replace the placeholder below with your deployed screenshot -->
 ![EduNexus AI — Document Studio, Methodology Graph, and Teacher Portal](./docs/screenshot-placeholder.png)
-
-> **Tip:** Add a screenshot of the Document Interaction Studio or Methodology Graph Workspace to `docs/screenshot-placeholder.png`, then update the path above.
 
 ---
 
