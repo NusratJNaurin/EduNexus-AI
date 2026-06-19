@@ -164,8 +164,20 @@ export function DocumentStudio() {
 
     setIsActionLoading(docId)
     try {
+      // 1. CRITICAL FIX: Clean up the relational concept nodes first to avoid foreign key or dangling graph link bugs
+      try {
+        // Fetch the specific node matching this document to remove it from the canvas tracking database
+        const userNodes = await conceptNodesCrud.fetchAll()
+        const matchingNode = userNodes.find((node: any) => node.document_id === docId)
+        if (matchingNode) {
+          await conceptNodesCrud.deleteById(matchingNode.id)
+        }
+      } catch (graphErr) {
+        console.error("Failed to safely prune relational concept nodes:", graphErr)
+      }
+
+      // 2. Remove the actual document and clear memory buffers
       await researchDocumentsCrud.deleteById(docId)
-      // Clean up cached elements when a row gets purged from db
       localStorage.removeItem(`summary_${docId}`)
       localStorage.removeItem(`chat_history_${docId}`)
       
@@ -181,7 +193,7 @@ export function DocumentStudio() {
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -195,11 +207,32 @@ export function DocumentStudio() {
 
       let realExtractedText = ""
       let totalPages = 1
-      
+
       if (file.type === "application/pdf") {
-        const pdfResult = await extractTextFromPdf(file)
-        realExtractedText = pdfResult.text
-        totalPages = pdfResult.pageCount
+        const pdfData = await extractTextFromPdf(file)
+        realExtractedText = pdfData.text
+        totalPages = pdfData.pageCount
+        // Standard binary count verification execution loop
+        try {
+          totalPages = await new Promise<number>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = function (e) {
+              const arr = new Uint8Array(e.target?.result as ArrayBuffer)
+              let count = 0
+              for (let i = 0; i < arr.length - 5; i++) {
+                if (arr[i] === 47 && arr[i + 1] === 84 && arr[i + 2] === 121 && arr[i + 3] === 112 && arr[i + 4] === 101 && arr[i + 5] === 47 && arr[i + 6] === 80 && arr[i + 7] === 97 && arr[i + 8] === 103 && arr[i + 9] === 101 && arr[i + 10] === 115) {
+                  const context = new TextDecoder().decode(arr.subarray(i, Math.min(i + 150, arr.length)))
+                  const match = context.match(/\/Count\s+(\d+)/)
+                  if (match) count = Math.max(count, parseInt(match[1], 10))
+                }
+              }
+              resolve(count > 0 ? count : 1)
+            }
+            reader.readAsArrayBuffer(file)
+          })
+        } catch (pErr) {
+          totalPages = 1
+        }
       } else {
         realExtractedText = await file.text()
       }
@@ -211,87 +244,109 @@ export function DocumentStudio() {
 
       const { error: storageError } = await supabase.storage
         .from("documents")
-        .upload(uniquePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        })
+        .upload(uniquePath, file, { cacheControl: "3600", upsert: true })
 
       if (storageError) throw storageError
-        const insertedRow = await researchDocumentsCrud.insertRecord({
-          owner_id: user.id,
-          title: file.name.replace(/\.[^/.]+$/, ""), 
-          file_name: file.name,
-          file_url: uniquePath,
-          file_size_bytes: file.size,
-          page_count: totalPages, 
-          extracted_text: realExtractedText,
-          keywords: ["Academic", "Multi-Disciplinary", "Core Reference Matrix"],
-          readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
-          complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1)),
-          methodology_latex: "L = -\\frac{1}{N} \\sum_{i=1}^{N} [y_i \\log(\\hat{y}_i) + (1 - y_i) \\log(1 - \\hat{y}_i)] + \\lambda \\sum_{j=1}^{M} w_j^2",
-        }) as DocumentRow
+
+      // Detect structural classification terms inside content body
+      const lowerText = realExtractedText.toLowerCase()
+      const detectedKeywords: string[] = []
+      if (lowerText.includes("vector") || lowerText.includes("coordinate") || lowerText.includes("axis")) detectedKeywords.push("Vectors")
+      if (lowerText.includes("motion") || lowerText.includes("velocity") || lowerText.includes("acceleration")) detectedKeywords.push("Kinematics")
+      if (lowerText.includes("array") || lowerText.includes("object") || lowerText.includes("static")) detectedKeywords.push("Data Structures")
+      
+      if (detectedKeywords.length === 0) detectedKeywords.push("General Reference")
+
+      const insertedRow = await researchDocumentsCrud.insertRecord({
+        owner_id: user.id,
+        title: file.name.replace(/\.[^/.]+$/, ""), 
+        file_name: file.name,
+        file_url: uniquePath,
+        file_size_bytes: file.size,
+        page_count: totalPages, 
+        extracted_text: realExtractedText,
+        keywords: detectedKeywords,
+        readability_score: parseFloat((Math.random() * 30 + 40).toFixed(1)),
+        complexity_score: parseFloat((Math.random() * 20 + 60).toFixed(1))
+      }) as DocumentRow
+
+      // Check if any existing system nodes share keyword parameters to assign edge connections
+      let determinedType = "paper"
+      try {
+        const existingNodes = await conceptNodesCrud.fetchAll()
+        const hasOverlap = existingNodes.some((node: any) => 
+          detectedKeywords.some(keyword => node.label?.toLowerCase().includes(keyword.toLowerCase()))
+        )
+        
+        // If there is an intersection match on the keywords, classify it dynamically as a tracking prerequisite tier
+        if (hasOverlap) {
+          determinedType = "Core Prerequisite"
+        }
+      } catch (e) {
+        console.error("Prerequisite context lookup failed, defaulting to normal structure:", e)
+      }
 
       await conceptNodesCrud.insertRecord({
         owner_id: user.id,
         document_id: insertedRow.id,
-        node_type: "paper",
+        node_type: determinedType, // Now dynamically tracks relationship types!
         label: insertedRow.title,
       })
 
       setDocuments((prev) => [insertedRow, ...prev])
       setActiveDoc(insertedRow)
-    } catch (err: any) {
-      console.error("Upload process crashed:", err)
-      setErrorMsg(err.message || "An unexpected error occurred during document integration.")
-    } finally {
-      setUploading(false)
-      setParsing(false)
-      if (fileInputRef.current) fileInputRef.current.value = "" 
-    }
-  }
-
-  const executeChatStream = async (promptText: string) => {
-    if (!activeDoc || sendingChat) return
-
-    setSendingChat(true)
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      text: promptText,
-      isUser: true
-    }
-    setMessages((prev) => [...prev, userMsg])
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: promptText,
-          formulaContext: activeDoc.methodology_latex || "",
-          documentText: documentText || activeDoc.extracted_text || ""
-        })
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Failed to get reply.")
-
-      const realReply: ChatMessage = {
-        id: `reply-${Date.now()}`,
-        text: data.reply,
-        isUser: false
+      } catch (err: any) {
+        console.error("Upload process crashed:", err)
+        setErrorMsg(err.message || "An unexpected error occurred during document integration.")
+      } {
+        setUploading(false)
+        setParsing(false)
+        if (fileInputRef.current) fileInputRef.current.value = "" 
       }
-      setMessages((prev) => [...prev, realReply])
-
-    } catch (err: any) {
-      console.error("Failed to fetch live AI response:", err)
-      setMessages((prev) => [...prev, {
-        id: `error-${Date.now()}`,
-        text: `Error processing query: ${err.message || "Could not connect to the API backend."}`,
-        isUser: false
-      }])
-    } finally {
-      setSendingChat(false)
     }
+
+    const executeChatStream = async (promptText: string) => {
+      if (!activeDoc || sendingChat) return
+
+      setSendingChat(true)
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        text: promptText,
+        isUser: true
+      }
+      setMessages((prev) => [...prev, userMsg])
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: promptText,
+            formulaContext: activeDoc.methodology_latex || "",
+            documentText: documentText || activeDoc.extracted_text || ""
+          })
+        })
+
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || "Failed to get reply.")
+
+        const realReply: ChatMessage = {
+          id: `reply-${Date.now()}`,
+          text: data.reply,
+          isUser: false
+        }
+        setMessages((prev) => [...prev, realReply])
+
+      } catch (err: any) {
+        console.error("Failed to fetch live AI response:", err)
+        setMessages((prev) => [...prev, {
+          id: `error-${Date.now()}`,
+          text: `Error processing query: ${err.message || "Could not connect to the API backend."}`,
+          isUser: false
+        }])
+      } finally {
+        setSendingChat(false)
+      }
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {
