@@ -7,7 +7,7 @@ import type {
   SectionEnrollmentRow,
 } from "./types"
 
-type CrudRecord = Record<string, unknown>
+type CrudRecord = object
 
 function createCrudHelpers<T extends CrudRecord>(tableName: string, idColumn = "id") {
   const fetchAll = async (): Promise<T[]> => {
@@ -23,13 +23,13 @@ function createCrudHelpers<T extends CrudRecord>(tableName: string, idColumn = "
   }
 
   const insertRecord = async (payload: Partial<T>): Promise<T> => {
-    const { data, error } = await supabase.from(tableName).insert(payload).select("*").single()
+    const { data, error } = await supabase.from(tableName).insert(payload as any).select("*").single()
     if (error) throw error
     return data as T
   }
 
   const updateById = async (id: string, payload: Partial<T>): Promise<T> => {
-    const { data, error } = await supabase.from(tableName).update(payload).eq(idColumn, id).select("*").single()
+    const { data, error } = await supabase.from(tableName).update(payload as any).eq(idColumn, id).select("*").single()
     if (error) throw error
     return data as T
   }

@@ -320,10 +320,28 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           // Update the type parameters of the newly inserted document node itself
           const freshNodesList = await conceptNodesCrud.fetchAll()
           const targetUploadedNode = freshNodesList.find((n) => n.document_id === insertedRow.id)
-          if (targetUploadedNode && decisions.newNodeType !== "paper") {
-            await conceptNodesCrud.updateById(targetUploadedNode.id, {
-              node_type: decisions.newNodeType,
-            })
+
+          if (targetUploadedNode) {
+            for (const edge of (decisions as any).newEdges || []) {
+              if (edge.targetId === targetUploadedNode.id) {  
+                await conceptNodesCrud.updateById(targetUploadedNode.id, {
+                    node_type: "paper",
+                    source_node_id: edge.sourceId,
+                    target_node_id: edge.targetId,
+                    relationship_type: edge.relationshipType,
+                    justification: edge.justification,
+                } as any)
+              }
+            
+              else if (edge.sourceId === targetUploadedNode.id) {
+                await conceptNodesCrud.updateById(edge.targetId, {
+                  node_type: "prerequisite",
+                  source_node_id: targetUploadedNode.id,
+                  relationship_type: edge.relationshipType,
+                  justification: edge.justification,
+                } as any)
+              }
+            }
           }
 
           // Pull down absolute final database states to synchronise canvas positions

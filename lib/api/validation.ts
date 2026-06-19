@@ -2,6 +2,11 @@ import { z } from "zod"
 
 export const conceptNodeTypeSchema = z.enum(["paper", "prerequisite", "research_gap"])
 
+export const relationshipTypeSchema = z.enum([
+  "REQUIRES_PREREQUISITE",
+  "IDENTIFIED_GAP",
+])
+
 export const chatRequestSchema = z.object({
   prompt: z.string().trim().min(1, "Prompt is required.").max(4000),
   documentText: z.string().max(50000).optional(),
@@ -23,13 +28,20 @@ export const analyzeDependenciesExistingNodeSchema = z.object({
   id: z.string().uuid(),
   label: z.string().trim().min(1).max(500),
   node_type: conceptNodeTypeSchema,
-  keywords: z.array(z.string()).optional(), 
+  keywords: z.array(z.string()).default([]), 
   summary: z.string().optional(),
 })
 
 export const analyzeDependenciesRequestSchema = z.object({
   newDoc: analyzeDependenciesNewDocSchema,
   existingNodes: z.array(analyzeDependenciesExistingNodeSchema).max(100),
+})
+
+export const dependencyEdgeSchema = z.object({
+  sourceId: z.string().uuid(),
+  targetId: z.string().uuid(),
+  relationshipType: relationshipTypeSchema,
+  justification: z.string().trim().min(10).max(500),
 })
 
 export const nodeTypeUpdateSchema = z.object({
@@ -39,7 +51,8 @@ export const nodeTypeUpdateSchema = z.object({
 
 export const analyzeDependenciesResponseSchema = z.object({
   newNodeType: conceptNodeTypeSchema,
-  updatedExistingNodes: z.array(nodeTypeUpdateSchema),
+  newEdges: z.array(dependencyEdgeSchema),
+  updatedExistingNodes: z.array(nodeTypeUpdateSchema).default([]),
 })
 
 export const vivaResponseSchema = z.object({
@@ -72,8 +85,14 @@ export function validateVivaFormData(formData: FormData): {
 
   return {
     audioFile,
-    nodeLabel: typeof nodeLabel === "string" && nodeLabel.trim() ? nodeLabel.trim().slice(0, 500) : "General",
-    nodeType: typeof nodeType === "string" && nodeType.trim() ? nodeType.trim().slice(0, 50) : "paper",
+    nodeLabel: 
+      typeof nodeLabel === "string" && nodeLabel.trim() 
+        ? nodeLabel.trim().slice(0, 500) 
+        : "General",
+      nodeType: 
+      typeof nodeType === "string" && nodeType.trim() 
+        ? nodeType.trim().slice(0, 50) 
+        : "paper",
   }
 }
 
