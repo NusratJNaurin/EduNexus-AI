@@ -17,37 +17,42 @@ export async function POST(request: Request) {
       })
     }
 
-    const prompt = `You are an academic graph database supervisor engine. Your job is to identify if a conceptual structural dependency relationship exists between a newly uploaded document and a set of existing graph nodes.
+    const prompt = `You are an academic graph database supervisor engine. Your job is to identify if a conceptual structural or sequential dependency relationships exist between a newly uploaded document and your existing graph nodes.
 
-New Document:
-- Title: "${newDoc.title}"
-- Keywords: ${JSON.stringify(newDoc.keywords)}
-- Summary Core: "${newDoc.textSnippet}"
+      New Document:
+      - Title: "${newDoc.title}"
+      - Keywords: ${JSON.stringify(newDoc.keywords)}
+      - Excerpt/Abstract Footprint: "${newDoc.textSnippet}"
 
-Existing Graph Nodes in Database:
-${JSON.stringify(
-  existingNodes.map((node) => ({
-    id: node.id,
-    label: node.label,
-    node_type: node.node_type,
-  })),
-)}
+      Existing Graph Nodes in Database:
+      ${JSON.stringify(
+        existingNodes.map((node) => ({
+          id: node.id,
+          label: node.label,
+          node_type: node.node_type,
+          keywords: node.keywords || [],
+          summary: node.summary,
+        })),
+      )}
 
-CRITICAL RULES:
-1. A node should only be marked as "prerequisite" if its concepts are absolutely foundational and required to understand the other document.
-2. If the new document is a prerequisite for an existing document, mark that existing node's target type as "prerequisite".
-3. If an existing document is a prerequisite for this new document, mark the new document's type as "prerequisite".
-4. If there is no educational or sequential relationship, leave their roles as "paper".
-5. Only use these exact node types: "paper", "prerequisite", "research_gap".
+      CRITICAL CLASSIFICATION ARCHITECTURE RULES:
+      1. BASELINE DEFAULT ("paper"): Treat "paper" as the standard baseline entry type. If a document is simply in the same field or related topically without a strict sequential constraint, it MUST remain or default to "paper". Do not overclassify.
+      2. SEQUENTIAL PREREQUISITES ("prerequisite"):
+        - If the New Document directly builds upon, inherits frameworks from, or requires a reader to understand an Existing Node first, classify the NEW document's "newNodeType" as "prerequisite".
+        - If the New Document is a foundational framework that an Existing Node explicitly requires, change that specific existing node's "node_type" to "prerequisite" inside "updatedExistingNodes".
+      3. LITERATURE HOLES ("research_gap"):
+        - If the New Document explicitly exposes, aims to solve, or isolates an unaddressed experimental limitation, structural flaw, or scope constraint outlined in an Existing Node's summary, change that existing node's "node_type" to "research_gap".
 
-Return your analysis strictly as a JSON object matching this schema:
-{
-  "newNodeType": "paper" | "prerequisite" | "research_gap",
-  "updatedExistingNodes": [
-    { "id": "string", 
-     "node_type": "paper" | "prerequisite" | "research_gap" }
-  ]
-}`
+      Return your analysis strictly as a JSON object matching this schema:
+      {
+        "newNodeType": "paper" | "prerequisite" | "research_gap",
+        "updatedExistingNodes": [
+          { 
+            "id": "string", 
+            "node_type": "paper" | "prerequisite" | "research_gap"
+          }
+        ]
+      }`
 
     const decisions = await generateJson(prompt, analyzeDependenciesResponseSchema)
 
