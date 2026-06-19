@@ -255,13 +255,21 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
             newDoc: {
               title: insertedRow.title,
               keywords: detectedKeywords,
-              textSnippet: realExtractedText.slice(0, 1500),
+              textSnippet: realExtractedText.length > 2500 
+                ? realExtractedText.slice(300, 2500)
+                : realExtractedText,
             },
-            existingNodes: userNodes.map((node) => ({
-              id: node.id,
-              label: node.label,
-              node_type: node.node_type,
-            })),
+            existingNodes: userNodes.map((node) => {
+              const matchedDoc = documents.find((d) => d.id === node.document_id);
+              const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || "";
+              return {
+                id: node.id,
+                label: node.label,
+                node_type: node.node_type,
+                keywords: matchedDoc?.keywords || [],
+                summary: cachedSummary || matchedDoc?.extracted_text?.slice(0, 500) || "",
+              };
+            }),
           })
 
           determinedType = decisions.newNodeType
