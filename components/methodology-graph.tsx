@@ -47,14 +47,6 @@ type DocumentRow = {
   title: string
 }
 
-const STATIC_EDGES: [string, string][] = [
-  ["core", "p1"],
-  ["core", "p2"],
-  ["core", "pre1"],
-  ["core", "pre2"],
-  ["core", "gap2"],
-]
-
 export function MethodologyGraph() {
   const [nodes, setNodes] = useState<Node[]>([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -77,13 +69,12 @@ export function MethodologyGraph() {
   const [newAnswer, setNewAnswer] = useState("")
   const [savingScore, setSavingScore] = useState(false)
 
-  // Define your screen dimensions and padding
-  const width = 800;  // Replace with your actual width
-  const height = 600; // Replace with your actual height
-  const padding = 40; // Keeps nodes away from the very edge
+  const width = 800;  
+  const height = 600; 
+  const padding = 60; 
   const cx = width / 2;
   const cy = height / 2;
-  const spacing = 30; 
+  const spacing = 150;
 
   useEffect(() => {
     fetchGraphData()
@@ -313,10 +304,9 @@ export function MethodologyGraph() {
   return (
     <TooltipProvider>
       <div className="space-y-4 p-4 lg:p-5 w-full check-layout">
-        {/* Adjusted column grid settings to stretch elements down dynamically */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] items-stretch">
           
-          {/* LEFT CANVAS WORKSPACE AREA CONTAINER - Stretched minimum viewport boundaries */}
+          {/* LEFT CANVAS WORKSPACE AREA CONTAINER */}
           <section className="relative min-h-[78vh] flex-1 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-sm">
             <div className="flex items-center justify-between border-b border-border p-3 bg-card">
               <div className="flex items-center gap-2">
@@ -343,20 +333,19 @@ export function MethodologyGraph() {
               ) : (
                 <>
                   <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
-                    {STATIC_EDGES.map(([a, b], i) => {
-                      const na = nodes[i % nodes.length]
-                      const nb = nodes[(i + 1) % nodes.length]
-                      if (!na || !nb) return null
+                    {nodes.map((node, i) => {
+                      if (i === 0) return null
+                      const parentNode = nodes[i - 1]
                       return (
                         <line
-                          key={i}
-                          x1={na.x} 
-                          y1={na.y} 
-                          x2={nb.x} 
-                          y2={nb.y}
+                          key={`edge-${node.id}`}
+                          x1={parentNode.x} 
+                          y1={parentNode.y} 
+                          x2={node.x} 
+                          y2={node.y}
                           stroke="var(--color-border)"
-                          strokeWidth={1.5}
-                          strokeDasharray={na.node_type === "research_gap" || nb.node_type === "research_gap" ? "4 4" : undefined}
+                          strokeWidth={2}
+                          strokeDasharray={node.node_type === "research_gap" ? "4 4" : undefined}
                         />
                       )
                     })}
@@ -397,10 +386,8 @@ export function MethodologyGraph() {
             </div>
           </section>
 
-          {/* RIGHT INTERACTIVE SOCRATIC SIDEBAR INTERACTIVE LOGGER FRAMEWORK - Locked to h-full flex configurations */}
+          {/* RIGHT SIDEBAR INTERACTIVE LOGGER PANEL */}
           <section className="flex flex-col gap-4 h-full min-h-[78vh]">
-            
-            {/* Viva Pod Module Panel */}
             <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground shadow-sm shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -436,7 +423,6 @@ export function MethodologyGraph() {
               </div>
             </div>
 
-            {/* Live Viva Board Simulation Engine Pod - Extended display borders cleanly */}
             {selectedNode && (
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm shrink-0 transition-all animate-in fade-in duration-200">
                 <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
@@ -464,14 +450,12 @@ export function MethodologyGraph() {
               </div>
             )}
 
-            {/* GROUNDED CHAT TERMINAL PANEL INTERACTIVE MATRIX STUDIO BLOCK - flex-1 expands to take remaining height */}
             <div className="flex flex-col rounded-xl border border-border bg-card flex-1 min-h-[300px] shadow-sm overflow-hidden">
               <div className="flex items-center gap-2 border-b border-border p-3 bg-muted/30 shrink-0">
                 <Sparkles className="size-4 text-primary" aria-hidden="true" />
                 <p className="text-sm font-semibold text-card-foreground">Source-Grounded Interaction Chat Studio Terminal</p>
               </div>
 
-              {/* Increased maximum scrolling layout threshold to capture full block updates */}
               <div className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[320px]">
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.isUser ? "justify-end" : "justify-start"}`}>
