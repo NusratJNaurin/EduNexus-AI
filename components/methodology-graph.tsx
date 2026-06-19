@@ -77,6 +77,14 @@ export function MethodologyGraph() {
   const [newAnswer, setNewAnswer] = useState("")
   const [savingScore, setSavingScore] = useState(false)
 
+  // Define your screen dimensions and padding
+  const width = 800;  // Replace with your actual width
+  const height = 600; // Replace with your actual height
+  const padding = 40; // Keeps nodes away from the very edge
+  const cx = width / 2;
+  const cy = height / 2;
+  const spacing = 30; 
+
   useEffect(() => {
     fetchGraphData()
   }, [])
@@ -94,8 +102,8 @@ export function MethodologyGraph() {
         .map((item, idx) => ({
           id: item.id,
           owner_id: item.owner_id,
-          x: item.x ?? (Math.cos(idx * 2.4) * (idx * 45)+30), // 250 is the center X
-          y: item.y ?? (Math.sin(idx * 2.4) * (idx * 35)+20), // 200 is the center Y
+          x: item.x ?? (idx === 0 ? cx : Math.min(width - padding, Math.max(padding, cx + Math.cos(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
+y: item.y ?? (idx === 0 ? cy : Math.min(height - padding, Math.max(padding, cy + Math.sin(idx * 2.4) * (Math.sqrt(idx) * spacing)))),
           label: item.label || "Unnamed Concept Parameter",
           node_type: item.node_type || "paper",
           viva_feedback: item.viva_feedback || [] 
