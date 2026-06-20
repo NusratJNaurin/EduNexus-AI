@@ -5,6 +5,7 @@ import type {
   ProfileRow,
   ResearchDocumentRow,
   SectionEnrollmentRow,
+  ConceptEdgeRow,
 } from "./types"
 
 type CrudRecord = object
@@ -75,3 +76,4 @@ export function getFileUrl(bucketName: string, filePath: string): string {
 }
 
 export { createCrudHelpers }
+export const conceptEdgesCrud = createCrudHelpers<ConceptEdgeRow>("concept_edges")

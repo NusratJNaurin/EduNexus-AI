@@ -45,6 +45,16 @@ export interface ConceptNodeRow {
   updated_at: string
 }
 
+export interface ConceptEdgeRow {
+  id: string
+  owner_id: string
+  source_node_id: string
+  target_node_id: string
+  relationship_type: "prerequisite" | "research_gap"
+  justification: string | null
+  created_at: string
+}
+
 export interface ClassSectionRow {
   id: string
   instructor_id: string

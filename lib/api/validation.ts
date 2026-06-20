@@ -3,8 +3,8 @@ import { z } from "zod"
 export const conceptNodeTypeSchema = z.enum(["paper", "prerequisite", "research_gap"])
 
 export const relationshipTypeSchema = z.enum([
-  "REQUIRES_PREREQUISITE",
-  "IDENTIFIED_GAP",
+  "prerequisite",
+  "research_gap",
 ])
 
 export const chatRequestSchema = z.object({

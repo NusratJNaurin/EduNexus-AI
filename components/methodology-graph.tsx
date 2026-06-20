@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Mic,
@@ -19,10 +19,11 @@ import {
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
-import { conceptNodesCrud } from "@/lib/crud"
+import { conceptNodesCrud, conceptEdgesCrud } from "@/lib/crud"
 import { postChat, postViva } from "@/lib/api-client"
-import type { ConceptNodeRow, ConceptNodeType, VivaFeedbackItem } from "@/lib/types"
+import type { ConceptNodeRow, ConceptNodeType, VivaFeedbackItem, ConceptEdgeRow } from "@/lib/types"
 import { parseVivaFeedback, serializeVivaFeedback } from "@/lib/types"
+
 
 interface GraphNode {
   id: string
@@ -32,38 +33,37 @@ interface GraphNode {
   label: string
   node_type: ConceptNodeType
   viva_feedback: VivaFeedbackItem[]
+  keywords: string[]
 }
 
 const CANVAS_WIDTH = 800
 const CANVAS_HEIGHT = 600
-const CANVAS_PADDING = 60
-const CANVAS_CX = CANVAS_WIDTH / 2
-const CANVAS_CY = CANVAS_HEIGHT / 2
-const NODE_SPACING = 150
 
-function mapConceptNodeToGraphNode(item: ConceptNodeRow, index: number): GraphNode {
+function mapConceptNodeToGraphNode(item: ConceptNodeRow, index: number, totalCount: number): GraphNode {
+  // Clear Layered Layout Arrangement - Prevents nodes from overlapping on top of each other
+  let x = CANVAS_WIDTH / 2
+  let y = 300
+
+  if (item.node_type === "prerequisite") {
+    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
+    y = 100 // Foundational components sit uniformly at the top
+  } else if (item.node_type === "paper") {
+    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
+    y = 300 // Main evaluation literature structures populate the center meridian
+  } else {
+    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 160 + (index * ((CANVAS_WIDTH - 320) / Math.max(1, totalCount - 1)))
+    y = 500 // Foundational research structural gaps anchor the base plane
+  }
+
   return {
     id: item.id,
     owner_id: item.owner_id,
-    x:
-      item.position_x ||
-      (index === 0
-        ? CANVAS_CX
-        : Math.min(
-            CANVAS_WIDTH - CANVAS_PADDING,
-            Math.max(CANVAS_PADDING, CANVAS_CX + Math.cos(index * 2.4) * (Math.sqrt(index) * NODE_SPACING)),
-          )),
-    y:
-      item.position_y ||
-      (index === 0
-        ? CANVAS_CY
-        : Math.min(
-            CANVAS_HEIGHT - CANVAS_PADDING,
-            Math.max(CANVAS_PADDING, CANVAS_CY + Math.sin(index * 2.4) * (Math.sqrt(index) * NODE_SPACING)),
-          )),
+    x: item.position_x || x,
+    y: item.position_y || y,
     label: item.label || "Unnamed Concept Parameter",
     node_type: item.node_type,
     viva_feedback: parseVivaFeedback(item.viva_feedback),
+    keywords: (item as any).keywords || [],
   }
 }
 
@@ -90,6 +90,43 @@ export function MethodologyGraph() {
   const [newAnswer, setNewAnswer] = useState("")
   const [savingScore, setSavingScore] = useState(false)
 
+  const [conceptEdges, setConceptEdges] = useState<ConceptEdgeRow[]>([])
+
+  // COMPUTE REAL-TIME DYNAMIC RELATIONSHIP EDGES
+  // const generatedEdges = useMemo(() => {
+  //   const edgesList: Array<{ id: string; source: GraphNode; target: GraphNode; type: "prerequisite" | "research_gap" }> = []
+    
+  //   const papers = nodes.filter((n) => n.node_type === "paper")
+  //   const prerequisites = nodes.filter((n) => n.node_type === "prerequisite")
+  //   const gaps = nodes.filter((n) => n.node_type === "research_gap")
+
+  //   // Link Prerequisites -> Main Papers natively based on structural flow
+  //   prerequisites.forEach((prereq) => {
+  //     papers.forEach((paper) => {
+  //       edgesList.push({
+  //         id: `edge-${prereq.id}-${paper.id}`,
+  //         source: prereq,
+  //         target: paper,
+  //         type: "prerequisite",
+  //       })
+  //     })
+  //   })
+
+  //   // Link Main Papers -> Identified Research Gaps
+  //   papers.forEach((paper) => {
+  //     gaps.forEach((gap) => {
+  //       edgesList.push({
+  //         id: `edge-${paper.id}-${gap.id}`,
+  //         source: paper,
+  //         target: gap,
+  //         type: "research_gap",
+  //       })
+  //     })
+  //   })
+
+  //   return edgesList
+  // }, [nodes])
+
   useEffect(() => {
     void fetchGraphData()
   }, [])
@@ -103,11 +140,13 @@ export function MethodologyGraph() {
       if (!user) return
 
       const allRecords = await conceptNodesCrud.fetchAll()
-      const userNodes = allRecords
-        .filter((item) => item.owner_id === user.id)
-        .map((item, index) => mapConceptNodeToGraphNode(item, index))
+      const userRecords = allRecords.filter((item) => item.owner_id === user.id)
+      const userNodes = userRecords.map((item, index) => mapConceptNodeToGraphNode(item, index, userRecords.length))
+      const edgeRecords = await conceptEdgesCrud.fetchAll()
+      const userEdges = edgeRecords.filter((e) => e.owner_id === user.id)
 
       setNodes(userNodes)
+      setConceptEdges(userEdges)
       if (userNodes.length > 0) {
         setSelectedNode((prev) => {
           const fresh = userNodes.find((node) => node.id === prev?.id)
@@ -326,9 +365,9 @@ export function MethodologyGraph() {
                 <p className="text-sm font-semibold text-card-foreground">Relational Methodology Web Canvas</p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs">
-                <Legend color="bg-primary" label="Paper Structure" />
-                <Legend color="bg-accent" label="Core Prerequisite" />
-                <Legend color="border-2 border-dashed border-accent bg-card" label="Identified Gap" />
+                <Legend color="bg-[#742A2A]" label="Paper Structure" />
+                <Legend color="bg-[#EAB308]" label="Core Prerequisite" />
+                <Legend color="border-2 border-dashed border-[#EAB308] bg-card" label="Identified Gap" />
               </div>
             </div>
 
@@ -347,22 +386,53 @@ export function MethodologyGraph() {
               ) : (
                 <>
                   <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
-                    {nodes.map((node, index) => {
-                      if (index === 0) return null
-                      const parentNode = nodes[index - 1]
+                    <defs>
+                      <marker id="arrow-prereq" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 2 L 10 5 L 0 8 z" fill="#EAB308" />
+                      </marker>
+                      <marker id="arrow-gap" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 2 L 10 5 L 0 8 z" fill="#EAB308" />
+                      </marker>
+                    </defs>
+
+                    {/* RENDER DYNAMIC RELATIONSHIP EDGES */}
+                    {/* {generatedEdges.map((edge) => {
+                      const isPrereq = edge.type === "prerequisite"
                       return (
                         <line
-                          key={`edge-${node.id}`}
-                          x1={parentNode.x}
-                          y1={parentNode.y}
-                          x2={node.x}
-                          y2={node.y}
-                          stroke="var(--color-border)"
+                          key={edge.id}
+                          x1={edge.source.x}
+                          y1={edge.source.y}
+                          x2={edge.target.x}
+                          y2={edge.target.y}
+                          stroke="#EAB308" 
                           strokeWidth={2}
-                          strokeDasharray={node.node_type === "research_gap" ? "4 4" : undefined}
+                          strokeDasharray={edge.type === "research_gap" ? "5 5" : undefined}
+                          markerEnd={isPrereq ? "url(#arrow-prereq)" : "url(#arrow-gap)"}
+                          className="opacity-60"
                         />
                       )
-                    })}
+                    })} */}
+                    {conceptEdges.map(edge => {
+                      const source = nodes.find(n => n.id === edge.source_node_id)
+                      const target = nodes.find(n => n.id === edge.target_node_id)
+
+                      if (!source || !target) return null
+
+                      return (
+                        <line
+                          key={edge.id}
+                          x1={source.x}
+                          y1={source.y}
+                          x2={target.x}
+                          y2={target.y}
+                          stroke="#EAB308"
+                          strokeWidth={2}
+                          strokeDasharray={edge.relationship_type === "research_gap" ? "5 5" : undefined}
+                        />
+                      )
+                    })
+}
                   </svg>
 
                   {nodes.map((node) => {
@@ -379,14 +449,14 @@ export function MethodologyGraph() {
                         <div
                           className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
                             isSelected
-                              ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
+                              ? "ring-4 ring-white border-white scale-105"
                               : "hover:scale-105"
                           } ${
                             node.node_type === "paper"
-                              ? "bg-primary text-primary-foreground border-primary"
+                              ? "bg-[#742A2A] text-white border-[#742A2A]"
                               : node.node_type === "prerequisite"
-                                ? "bg-accent text-accent-foreground border-accent"
-                                : "border-2 border-dashed border-accent bg-card text-foreground"
+                                ? "bg-[#EAB308] text-slate-950 border-[#EAB308]"
+                                : "border-2 border-dashed border-[#EAB308] bg-card text-foreground"
                           }`}
                         >
                           <Icon className="size-3.5 shrink-0" aria-hidden="true" />

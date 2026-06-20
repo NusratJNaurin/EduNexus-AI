@@ -24,6 +24,7 @@ import { PdfVisualViewer } from "./PdfVisualViewer"
 import { z } from "zod"
 import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
 export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
+import { conceptEdgesCrud } from "@/lib/crud"
 
 interface DocumentStudioProps { onNodesUpdated?: () => void}
 
@@ -271,23 +272,22 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
       }
 
       // 3. SLIDING TIMER DEBOUNCE BLOCK FOR AI COMPUTE
-      // Clear any pending layout organization timers because a new upload occurred
       if (organizationalTimerRef.current) {
         console.log("Resetting 30s background AI window due to active file upload activity...")
         clearTimeout(organizationalTimerRef.current)
       }
 
-      // Spin up a delayed job to prevent 429 quota exhaustion
       organizationalTimerRef.current = setTimeout(async () => {
         console.log("User inactive for 30s. Starting deferred background graph analysis...")
         
         try {
-          const existingNodes = await conceptNodesCrud.fetchAll()
-          const userNodes = existingNodes.filter((node) => node.owner_id === user.id)
+          const freshNodes = await conceptNodesCrud.fetchAll()
+          const userNodes = freshNodes.filter((node) => node.owner_id === user.id)
 
           // Make sure there are companion literature nodes to actually analyze links against
           if (userNodes.length <= 1) return
 
+          const allDocs = await researchDocumentsCrud.fetchAll()
           const decisions = await postAnalyzeDependencies({
             newDoc: {
               title: insertedRow.title,
@@ -297,54 +297,32 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
                 : realExtractedText.slice(300),
             },
             existingNodes: userNodes.map((node) => {
-              const matchedDoc = documents.find((d) => d.id === node.document_id)
-              const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || ""
+              const matchedDoc = allDocs.find((d) => d.id === node.document_id)
+              // const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || ""
               return {
                 id: node.id,
                 label: node.label,
                 node_type: node.node_type,
                 keywords: matchedDoc?.keywords || [],
-                summary: cachedSummary || matchedDoc?.extracted_text?.slice(0, 500) || "",
-              } as any
+                summary: matchedDoc?.extracted_text?.slice(0, 500) || "",
+              }
             }),
           })
 
-          // Retroactively update nodes that the target new document reconfigured
-          for (const legacyUpdate of decisions.updatedExistingNodes) {
-            const validatedUpdate = (legacyUpdate as unknown) as z.infer<typeof nodeTypeUpdateSchema>
-            await conceptNodesCrud.updateById(legacyUpdate.id, {
-              node_type: validatedUpdate.node_type,
-            })
-          }
-
-          // Update the type parameters of the newly inserted document node itself
-          const freshNodesList = await conceptNodesCrud.fetchAll()
-          const targetUploadedNode = freshNodesList.find((n) => n.document_id === insertedRow.id)
-
-          if (targetUploadedNode) {
+          const targetUploadedNode = userNodes.find((n) => n.document_id === insertedRow.id)
+          
+          if (targetUploadedNode && (decisions as any).newEdges) {
             for (const edge of (decisions as any).newEdges || []) {
-              if (edge.targetId === targetUploadedNode.id) {  
-                await conceptNodesCrud.updateById(targetUploadedNode.id, {
-                    node_type: "paper",
-                    source_node_id: edge.sourceId,
-                    target_node_id: edge.targetId,
-                    relationship_type: edge.relationshipType,
-                    justification: edge.justification,
-                } as any)
-              }
-            
-              else if (edge.sourceId === targetUploadedNode.id) {
-                await conceptNodesCrud.updateById(edge.targetId, {
-                  node_type: "prerequisite",
-                  source_node_id: targetUploadedNode.id,
-                  relationship_type: edge.relationshipType,
-                  justification: edge.justification,
-                } as any)
-              }
+              await conceptEdgesCrud.insertRecord({
+                owner_id: user.id,
+                source_node_id: targetUploadedNode.id,
+                target_node_id: edge.targetId,
+                relationship_type: edge.relationshipType,
+                justification: edge.justification,
+              })
             }
           }
 
-          // Pull down absolute final database states to synchronise canvas positions
           await loadUserDocuments()
           if (onNodesUpdated) {
             onNodesUpdated()
@@ -353,7 +331,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         } catch (aiError) {
           console.error("AI background dependency analysis failed safely in window handler:", aiError)
         }
-      }, 30000) // 30,000 milliseconds = 30 second delay window
+      }, 30000)
 
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during document integration."

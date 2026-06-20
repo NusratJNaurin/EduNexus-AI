@@ -97,6 +97,18 @@ create table if not exists public.concept_nodes (
   updated_at    timestamptz not null default now()
 );
 
+-- 6. CONCEPT_EDGES
+create table if not exists public.concept_edges (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  source_node_id uuid not null references public.concept_nodes(id) on delete cascade,
+  target_node_id uuid not null references public.concept_nodes(id) on delete cascade,
+  relationship_type text not null check (relationship_type in ('prerequisite', 'research_gap')),
+  justification text,
+  created_at timestamptz not null default now(),
+  constraint concept_edges_unique unique (source_node_id, target_node_id, relationship_type)
+);
+
 -- ============================================================================
 -- PHASE 2: INDEXES & ROW LEVEL SECURITY ENABLING
 -- ============================================================================
@@ -181,6 +193,16 @@ create policy "Owners can update nodes" on public.concept_nodes for update using
 
 drop policy if exists "Owners can delete nodes" on public.concept_nodes;
 create policy "Owners can delete nodes" on public.concept_nodes for delete using (auth.uid() = owner_id);
+
+-- concept Edges Policies
+create index if not exists concept_edges_owner_id_idx
+on public.concept_edges(owner_id);
+
+create index if not exists concept_edges_source_idx
+on public.concept_edges(source_node_id);
+
+create index if not exists concept_edges_target_idx
+on public.concept_edges(target_node_id);
 
 -- ============================================================================
 -- PHASE 4: AUTOMATIONS, TRIGGERS & STORAGE

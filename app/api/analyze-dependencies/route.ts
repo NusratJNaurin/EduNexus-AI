@@ -152,17 +152,6 @@ export async function POST(request: Request) {
       }
       `
 
-      // Return your analysis strictly as a JSON object matching this schema:
-      // {
-      //   "newNodeType": "paper" | "prerequisite" | "research_gap",
-      //   "updatedExistingNodes": [
-      //     { 
-      //       "id": "string", 
-      //       "node_type": "paper" | "prerequisite" | "research_gap"
-      //     }
-      //   ]
-      // }`
-
     const decisions = await generateJson(prompt, analyzeDependenciesResponseSchema)
 
     const validNodeIds = new Set(existingNodes.map((node) => node.id))
