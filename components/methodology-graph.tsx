@@ -93,39 +93,39 @@ export function MethodologyGraph() {
   const [conceptEdges, setConceptEdges] = useState<ConceptEdgeRow[]>([])
 
   // COMPUTE REAL-TIME DYNAMIC RELATIONSHIP EDGES
-  // const generatedEdges = useMemo(() => {
-  //   const edgesList: Array<{ id: string; source: GraphNode; target: GraphNode; type: "prerequisite" | "research_gap" }> = []
+  const generatedEdges = useMemo(() => {
+    const edgesList: Array<{ id: string; source: GraphNode; target: GraphNode; type: "prerequisite" | "research_gap" }> = []
     
-  //   const papers = nodes.filter((n) => n.node_type === "paper")
-  //   const prerequisites = nodes.filter((n) => n.node_type === "prerequisite")
-  //   const gaps = nodes.filter((n) => n.node_type === "research_gap")
+    const papers = nodes.filter((n) => n.node_type === "paper")
+    const prerequisites = nodes.filter((n) => n.node_type === "prerequisite")
+    const gaps = nodes.filter((n) => n.node_type === "research_gap")
 
-  //   // Link Prerequisites -> Main Papers natively based on structural flow
-  //   prerequisites.forEach((prereq) => {
-  //     papers.forEach((paper) => {
-  //       edgesList.push({
-  //         id: `edge-${prereq.id}-${paper.id}`,
-  //         source: prereq,
-  //         target: paper,
-  //         type: "prerequisite",
-  //       })
-  //     })
-  //   })
+    // Link Prerequisites -> Main Papers natively based on structural flow
+    prerequisites.forEach((prereq) => {
+      papers.forEach((paper) => {
+        edgesList.push({
+          id: `edge-${prereq.id}-${paper.id}`,
+          source: prereq,
+          target: paper,
+          type: "prerequisite",
+        })
+      })
+    })
 
-  //   // Link Main Papers -> Identified Research Gaps
-  //   papers.forEach((paper) => {
-  //     gaps.forEach((gap) => {
-  //       edgesList.push({
-  //         id: `edge-${paper.id}-${gap.id}`,
-  //         source: paper,
-  //         target: gap,
-  //         type: "research_gap",
-  //       })
-  //     })
-  //   })
+    // Link Main Papers -> Identified Research Gaps
+    papers.forEach((paper) => {
+      gaps.forEach((gap) => {
+        edgesList.push({
+          id: `edge-${paper.id}-${gap.id}`,
+          source: paper,
+          target: gap,
+          type: "research_gap",
+        })
+      })
+    })
 
-  //   return edgesList
-  // }, [nodes])
+    return edgesList
+  }, [nodes])
 
   useEffect(() => {
     void fetchGraphData()

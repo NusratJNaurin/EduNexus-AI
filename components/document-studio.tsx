@@ -314,10 +314,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           if (targetUploadedNode && (decisions as any).newEdges) {
             for (const edge of (decisions as any).newEdges || []) {
               await conceptEdgesCrud.insertRecord({
-                owner_id: user.id,
                 source_node_id: targetUploadedNode.id,
-                target_node_id: edge.targetId,
-                relationship_type: edge.relationshipType,
+                target_node_id: edge.target_node_id,
+                relationship_type: edge.relationship_type,
                 justification: edge.justification,
               })
             }

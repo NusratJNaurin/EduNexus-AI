@@ -144,9 +144,9 @@ export async function POST(request: Request) {
         "newNodeType":"paper"| "prerequisite" | "research_gap",
         "newEdges":[
           {
-            "sourceId":"...",
-            "targetId":"...",
-            "relationshipType": "prerequisite" | "research_gap",
+            "source_node_id:":"...",
+            "target_node_id":"...",
+            "relationship_type": "prerequisite" | "research_gap",
             "justification":"..."
           }
         ]
