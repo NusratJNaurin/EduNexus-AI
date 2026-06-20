@@ -131,8 +131,16 @@ export interface NodeTypeUpdate {
   updatedType: ConceptNodeType
 }
 
+export interface DependencyEdge {
+  source_node_id: string
+  target_node_id: string
+  relationship_type: "prerequisite" | "research_gap"
+  justification: string
+}
+
 export interface AnalyzeDependenciesResponse {
   newNodeType: ConceptNodeType
+  newEdges: DependencyEdge[]
   updatedExistingNodes: NodeTypeUpdate[]
 }
 
