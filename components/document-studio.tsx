@@ -297,14 +297,12 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
                 : realExtractedText.slice(300),
             },
             existingNodes: userNodes.map((node) => {
-              const matchedDoc = allDocs.find((d) => d.id === node.document_id)
-              // const cachedSummary = localStorage.getItem(`summary_${node.document_id}`) || ""
               return {
                 id: node.id,
                 label: node.label,
                 node_type: node.node_type,
-                keywords: matchedDoc?.keywords || [],
-                summary: matchedDoc?.extracted_text?.slice(0, 500) || "",
+                keywords: allDocs.find((d) => d.id === node.document_id)?.keywords || [],
+                summary: allDocs.find((d) => d.id === node.document_id)?.extracted_text?.slice(0, 500) || "",
               }
             }),
           })
@@ -314,6 +312,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           if (targetUploadedNode && (decisions as any).newEdges) {
             for (const edge of (decisions as any).newEdges || []) {
               await conceptEdgesCrud.insertRecord({
+                owner_id: user.id,
                 source_node_id: targetUploadedNode.id,
                 target_node_id: edge.target_node_id,
                 relationship_type: edge.relationship_type,

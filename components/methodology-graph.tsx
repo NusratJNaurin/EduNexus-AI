@@ -40,19 +40,18 @@ const CANVAS_WIDTH = 800
 const CANVAS_HEIGHT = 600
 
 function mapConceptNodeToGraphNode(item: ConceptNodeRow, index: number, totalCount: number): GraphNode {
-  // Clear Layered Layout Arrangement - Prevents nodes from overlapping on top of each other
   let x = CANVAS_WIDTH / 2
   let y = 300
 
   if (item.node_type === "prerequisite") {
     x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
-    y = 100 // Foundational components sit uniformly at the top
+    y = 100 
   } else if (item.node_type === "paper") {
     x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
-    y = 300 // Main evaluation literature structures populate the center meridian
+    y = 300 
   } else {
     x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 160 + (index * ((CANVAS_WIDTH - 320) / Math.max(1, totalCount - 1)))
-    y = 500 // Foundational research structural gaps anchor the base plane
+    y = 500 
   }
 
   return {
@@ -91,41 +90,6 @@ export function MethodologyGraph() {
   const [savingScore, setSavingScore] = useState(false)
 
   const [conceptEdges, setConceptEdges] = useState<ConceptEdgeRow[]>([])
-
-  // COMPUTE REAL-TIME DYNAMIC RELATIONSHIP EDGES
-  const generatedEdges = useMemo(() => {
-    const edgesList: Array<{ id: string; source: GraphNode; target: GraphNode; type: "prerequisite" | "research_gap" }> = []
-    
-    const papers = nodes.filter((n) => n.node_type === "paper")
-    const prerequisites = nodes.filter((n) => n.node_type === "prerequisite")
-    const gaps = nodes.filter((n) => n.node_type === "research_gap")
-
-    // Link Prerequisites -> Main Papers natively based on structural flow
-    prerequisites.forEach((prereq) => {
-      papers.forEach((paper) => {
-        edgesList.push({
-          id: `edge-${prereq.id}-${paper.id}`,
-          source: prereq,
-          target: paper,
-          type: "prerequisite",
-        })
-      })
-    })
-
-    // Link Main Papers -> Identified Research Gaps
-    papers.forEach((paper) => {
-      gaps.forEach((gap) => {
-        edgesList.push({
-          id: `edge-${paper.id}-${gap.id}`,
-          source: paper,
-          target: gap,
-          type: "research_gap",
-        })
-      })
-    })
-
-    return edgesList
-  }, [nodes])
 
   useEffect(() => {
     void fetchGraphData()
@@ -387,32 +351,11 @@ export function MethodologyGraph() {
                 <>
                   <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
                     <defs>
-                      <marker id="arrow-prereq" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 2 L 10 5 L 0 8 z" fill="#EAB308" />
-                      </marker>
-                      <marker id="arrow-gap" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 2 L 10 5 L 0 8 z" fill="#EAB308" />
+                      <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#EAB308" />
                       </marker>
                     </defs>
 
-                    {/* RENDER DYNAMIC RELATIONSHIP EDGES */}
-                    {/* {generatedEdges.map((edge) => {
-                      const isPrereq = edge.type === "prerequisite"
-                      return (
-                        <line
-                          key={edge.id}
-                          x1={edge.source.x}
-                          y1={edge.source.y}
-                          x2={edge.target.x}
-                          y2={edge.target.y}
-                          stroke="#EAB308" 
-                          strokeWidth={2}
-                          strokeDasharray={edge.type === "research_gap" ? "5 5" : undefined}
-                          markerEnd={isPrereq ? "url(#arrow-prereq)" : "url(#arrow-gap)"}
-                          className="opacity-60"
-                        />
-                      )
-                    })} */}
                     {conceptEdges.map(edge => {
                       const source = nodes.find(n => n.id === edge.source_node_id)
                       const target = nodes.find(n => n.id === edge.target_node_id)
@@ -428,11 +371,12 @@ export function MethodologyGraph() {
                           y2={target.y}
                           stroke="#EAB308"
                           strokeWidth={2}
+                          markerEnd="url(#arrow)"
                           strokeDasharray={edge.relationship_type === "research_gap" ? "5 5" : undefined}
+                          className="opacity-75"
                         />
                       )
-                    })
-}
+                    })}
                   </svg>
 
                   {nodes.map((node) => {
