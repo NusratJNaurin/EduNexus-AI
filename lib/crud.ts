@@ -23,7 +23,7 @@ function createCrudHelpers<T extends CrudRecord>(tableName: string, idColumn = "
     return data as T
   }
 
-  // FIXED: Changed payload from Partial<T> to a structured map input passing explicit table requirements
+  // Refactored: Loosened type constraint to prevent TS compilation crashes on DB defaults
   const insertRecord = async (payload: Partial<T> & Record<string, unknown>): Promise<T> => {
     const { data, error } = await supabase
       .from(tableName)
@@ -35,7 +35,8 @@ function createCrudHelpers<T extends CrudRecord>(tableName: string, idColumn = "
     return data as T
   }
 
-  const updateById = async (id: string, payload: Partial<T>): Promise<T> => {
+  // Refactored: Loosened type constraint for updates to match insertRecord flexibility
+  const updateById = async (id: string, payload: Partial<T> & Record<string, unknown>): Promise<T> => {
     const { data, error } = await supabase
       .from(tableName)
       .update(payload as Record<string, unknown>)
