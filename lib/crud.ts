@@ -23,14 +23,26 @@ function createCrudHelpers<T extends CrudRecord>(tableName: string, idColumn = "
     return data as T
   }
 
-  const insertRecord = async (payload: Partial<T>): Promise<T> => {
-    const { data, error } = await supabase.from(tableName).insert(payload as any).select("*").single()
+  // FIXED: Changed payload from Partial<T> to a structured map input passing explicit table requirements
+  const insertRecord = async (payload: Partial<T> & Record<string, unknown>): Promise<T> => {
+    const { data, error } = await supabase
+      .from(tableName)
+      .insert(payload as Record<string, unknown>)
+      .select("*")
+      .single()
+      
     if (error) throw error
     return data as T
   }
 
   const updateById = async (id: string, payload: Partial<T>): Promise<T> => {
-    const { data, error } = await supabase.from(tableName).update(payload as any).eq(idColumn, id).select("*").single()
+    const { data, error } = await supabase
+      .from(tableName)
+      .update(payload as Record<string, unknown>)
+      .eq(idColumn, id)
+      .select("*")
+      .single()
+
     if (error) throw error
     return data as T
   }
@@ -49,6 +61,7 @@ export const researchDocumentsCrud = createCrudHelpers<ResearchDocumentRow>("res
 export const conceptNodesCrud = createCrudHelpers<ConceptNodeRow>("concept_nodes")
 export const classSectionsCrud = createCrudHelpers<ClassSectionRow>("class_sections")
 export const sectionEnrollmentsCrud = createCrudHelpers<SectionEnrollmentRow>("section_enrollments")
+export const conceptEdgesCrud = createCrudHelpers<ConceptEdgeRow>("concept_edges") // Grouped cleanly together!
 
 export async function uploadFileToStorage(
   bucketName: string,
@@ -76,4 +89,3 @@ export function getFileUrl(bucketName: string, filePath: string): string {
 }
 
 export { createCrudHelpers }
-export const conceptEdgesCrud = createCrudHelpers<ConceptEdgeRow>("concept_edges")

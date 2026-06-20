@@ -26,8 +26,9 @@ import { nodeTypeUpdateSchema } from "@/lib/api/validation"
 export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
 import { conceptEdgesCrud } from "@/lib/crud"
 
-interface DocumentStudioProps { onNodesUpdated?: () => void}
+interface DocumentStudioProps { onNodesUpdated?: () => void }
 
+// Fallback keyword detector for instantaneous layout indexing before dynamic AI categorization runs
 function detectKeywords(text: string): string[] {
   const lowerText = text.toLowerCase()
   const detectedKeywords: string[] = []
@@ -257,7 +258,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         complexity_score: computeComplexityScore(realExtractedText, totalPages),
       })
 
-      // 2. Immediately insert baseline paper node so the UI remains reactive
+      // 2. Immediately insert baseline paper node so the UI canvas grid remains reactive
       await conceptNodesCrud.insertRecord({
         owner_id: user.id,
         document_id: insertedRow.id,
@@ -271,7 +272,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         onNodesUpdated()
       }
 
-      // 3. SLIDING TIMER DEBOUNCE BLOCK FOR AI COMPUTE
+      // 3. SLIDING TIMER DEBOUNCE BLOCK FOR BACKSTAGE METHODOLOGY LAYOUT ANALYSIS
       if (organizationalTimerRef.current) {
         console.log("Resetting 30s background AI window due to active file upload activity...")
         clearTimeout(organizationalTimerRef.current)
@@ -284,7 +285,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           const freshNodes = await conceptNodesCrud.fetchAll()
           const userNodes = freshNodes.filter((node) => node.owner_id === user.id)
 
-          // Make sure there are companion literature nodes to actually analyze links against
+          // Confirm complementary records exist before triggering relational evaluations
           if (userNodes.length <= 1) return
 
           const allDocs = await researchDocumentsCrud.fetchAll()
@@ -311,6 +312,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           
           if (targetUploadedNode && (decisions as any).newEdges) {
             for (const edge of (decisions as any).newEdges || []) {
+              // FIXED: Explicitly provide owner_id to satisfy database Row-Level Security checks
               await conceptEdgesCrud.insertRecord({
                 owner_id: user.id,
                 source_node_id: targetUploadedNode.id,
