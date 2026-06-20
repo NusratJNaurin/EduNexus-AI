@@ -38,9 +38,9 @@ export const analyzeDependenciesRequestSchema = z.object({
 })
 
 export const dependencyEdgeSchema = z.object({
-  sourceId: z.string().uuid(),
-  targetId: z.string().uuid(),
-  relationshipType: relationshipTypeSchema,
+  source_node_id: z.string().uuid(),
+  target_node_id: z.string().uuid(),
+  relationship_type: relationshipTypeSchema,
   justification: z.string().trim().min(10).max(500),
 })
 

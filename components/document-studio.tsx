@@ -264,6 +264,8 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         document_id: insertedRow.id,
         node_type: "paper",
         label: insertedRow.title,
+        position_x: 250,
+        position_y: 200,
       })
 
       // Pull fresh local records to display the newly added node right away
@@ -312,14 +314,17 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           
           if (targetUploadedNode && (decisions as any).newEdges) {
             for (const edge of (decisions as any).newEdges || []) {
-              // FIXED: Explicitly provide owner_id to satisfy database Row-Level Security checks
-              await conceptEdgesCrud.insertRecord({
-                owner_id: user.id,
-                source_node_id: targetUploadedNode.id,
-                target_node_id: edge.target_node_id,
-                relationship_type: edge.relationship_type,
-                justification: edge.justification,
-              })
+              try {
+                await conceptEdgesCrud.insertRecord({
+                  owner_id: user.id,
+                  source_node_id: targetUploadedNode.id,
+                  target_node_id: edge.target_node_id,
+                  relationship_type: edge.relationship_type,
+                  justification: edge.justification,
+                })
+              } catch (edgeError) {
+                console.error("Failed to insert edge:", edgeError)
+              }
             }
           }
 
