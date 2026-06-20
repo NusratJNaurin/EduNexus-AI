@@ -14,6 +14,7 @@ export async function POST(request: Request) {
       return jsonOk({
         newNodeType: "paper",
         updatedExistingNodes: [],
+        newEdges: [],
       })
     }
 
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
           {
             "sourceId":"...",
             "targetId":"...",
-            "relationshipType": "paper" | "prerequisite" | "research_gap",
+            "relationshipType": "prerequisite" | "research_gap",
             "justification":"..."
           }
         ]
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
 
     return jsonOk({
       newNodeType: decisions.newNodeType,
+      newEdges: decisions.newEdges,
       updatedExistingNodes: sanitizedUpdates,
     })
   } catch (error) {
