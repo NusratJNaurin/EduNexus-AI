@@ -19,7 +19,7 @@ import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
 import { postAnalyzeDependencies, postChat, postSummarize } from "@/lib/api-client"
 import { usePersistedMessages } from "@/hooks/use-api"
-import type { ChatMessage, ConceptNodeType, ResearchDocumentRow } from "@/lib/types"
+import type { ChatMessage, ConceptNodeType, DependencyEdge, ResearchDocumentRow } from "@/lib/types"
 import { PdfVisualViewer } from "./PdfVisualViewer"
 import { z } from "zod"
 import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
@@ -283,12 +283,18 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
       organizationalTimerRef.current = setTimeout(async () => {
         console.log("User inactive for 30s. Starting deferred background graph analysis...")
         
+        // CRITICAL FIX: Capture user.id BEFORE async operations to preserve auth context
+        const capturedUserId = user.id
+        
         try {
           const freshNodes = await conceptNodesCrud.fetchAll()
-          const userNodes = freshNodes.filter((node) => node.owner_id === user.id)
+          const userNodes = freshNodes.filter((node) => node.owner_id === capturedUserId)
 
           // Confirm complementary records exist before triggering relational evaluations
-          if (userNodes.length <= 1) return
+          if (userNodes.length <= 1) {
+            console.log("Skipping edge analysis: only 1 node exists")
+            return
+          }
 
           const allDocs = await researchDocumentsCrud.fetchAll()
           const decisions = await postAnalyzeDependencies({
@@ -312,18 +318,42 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
           const targetUploadedNode = userNodes.find((n) => n.document_id === insertedRow.id)
           
-          if (targetUploadedNode && (decisions as any).newEdges) {
-            for (const edge of (decisions as any).newEdges || []) {
+          console.log("🔍 AI Dependency Analysis Results:", {
+            newEdgesCount: decisions.newEdges?.length || 0,
+            targetNodeFound: !!targetUploadedNode,
+            targetNodeId: targetUploadedNode?.id,
+          })
+          
+          if (targetUploadedNode && decisions.newEdges) {
+            for (const edge of decisions.newEdges) {
               try {
-                await conceptEdgesCrud.insertRecord({
-                  owner_id: user.id,
-                  source_node_id: targetUploadedNode.id,
+                // CRITICAL FIX: Use AI-provided source_node_id instead of hardcoding targetUploadedNode
+                const edgePayload = {
+                  owner_id: capturedUserId,
+                  source_node_id: edge.source_node_id,
                   target_node_id: edge.target_node_id,
                   relationship_type: edge.relationship_type,
-                  justification: edge.justification,
-                })
+                  justification: edge.justification || null,
+                }
+                
+                console.log("📤 Attempting edge insert with payload:", edgePayload)
+                
+                const insertedEdge = await conceptEdgesCrud.insertRecord(edgePayload)
+                
+                console.log("✅ Edge inserted successfully:", insertedEdge.id)
               } catch (edgeError) {
-                console.error("Failed to insert edge:", edgeError)
+                // CRITICAL FIX: Enhanced error logging with full details
+                console.error("❌ EDGE INSERT FAILED:", {
+                  error: edgeError,
+                  errorMessage: edgeError instanceof Error ? edgeError.message : String(edgeError),
+                  errorStack: edgeError instanceof Error ? edgeError.stack : undefined,
+                  attemptedPayload: {
+                    owner_id: capturedUserId,
+                    source_node_id: edge.source_node_id,
+                    target_node_id: edge.target_node_id,
+                    relationship_type: edge.relationship_type,
+                  },
+                })
               }
             }
           }
@@ -332,9 +362,13 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           if (onNodesUpdated) {
             onNodesUpdated()
           }
-          console.log("AI background graph layout optimization complete.")
+          console.log("✅ AI background graph layout optimization complete.")
         } catch (aiError) {
-          console.error("AI background dependency analysis failed safely in window handler:", aiError)
+          console.error("❌ AI background dependency analysis failed:", {
+            error: aiError,
+            errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
+            errorStack: aiError instanceof Error ? aiError.stack : undefined,
+          })
         }
       }, 30000)
 

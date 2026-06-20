@@ -194,15 +194,27 @@ create policy "Owners can update nodes" on public.concept_nodes for update using
 drop policy if exists "Owners can delete nodes" on public.concept_nodes;
 create policy "Owners can delete nodes" on public.concept_nodes for delete using (auth.uid() = owner_id);
 
--- concept Edges Policies
-create index if not exists concept_edges_owner_id_idx
-on public.concept_edges(owner_id);
 
-create index if not exists concept_edges_source_idx
-on public.concept_edges(source_node_id);
+-- 1. Explicitly activate RLS protection rules on the edges matrix table
+alter table public.concept_edges enable row level security;
 
-create index if not exists concept_edges_target_idx
-on public.concept_edges(target_node_id);
+-- 2. Grant Read access permission rules to authenticated owners
+drop policy if exists "Edges are viewable by owner" on public.concept_edges;
+create policy "Edges are viewable by owner" on public.concept_edges 
+for select to authenticated 
+using (auth.uid() = owner_id);
+
+-- 3. Grant Insert mutation rules to authenticated owners
+drop policy if exists "Owners can insert edges" on public.concept_edges;
+create policy "Owners can insert edges" on public.concept_edges 
+for insert to authenticated 
+with check (auth.uid() = owner_id);
+
+-- 4. Grant Delete rules to authenticated owners
+drop policy if exists "Owners can delete edges" on public.concept_edges;
+create policy "Owners can delete edges" on public.concept_edges 
+for delete to authenticated 
+using (auth.uid() = owner_id);
 
 -- ============================================================================
 -- PHASE 4: AUTOMATIONS, TRIGGERS & STORAGE
