@@ -14,8 +14,8 @@
 
 ## Screenshot
 
-<!-- Replace the placeholder below with your deployed screenshot -->
-![EduNexus AI — Document Studio, Methodology Graph, and Teacher Portal](./docs/screenshot-placeholder.png)
+<img width="2834" height="1454" alt="Screenshot 2026-06-20 163009" src="https://github.com/user-attachments/assets/00bd4055-0805-44df-b62f-8305de17c204" />
+
 
 ---
 
