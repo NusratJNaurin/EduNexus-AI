@@ -19,6 +19,7 @@ export const summarizeRequestSchema = z.object({
 })
 
 export const analyzeDependenciesNewDocSchema = z.object({
+  id: z.string().uuid().or(z.string()),
   title: z.string().trim().min(1).max(500),
   keywords: z.array(z.string().trim().min(1).max(100)).max(20),
   textSnippet: z.string().trim().min(1).max(5000),
@@ -51,9 +52,16 @@ export const nodeTypeUpdateSchema = z.object({
 
 export const analyzeDependenciesResponseSchema = z.object({
   newNodeType: conceptNodeTypeSchema,
-  newEdges: z.array(dependencyEdgeSchema),
   updatedExistingNodes: z.array(nodeTypeUpdateSchema).default([]),
-})
+  newEdges: z.array(
+    z.object({
+      source_node_id: z.string().min(1), // <-- MUST BE SNAKE_CASE
+      target_node_id: z.string().min(1), // <-- MUST BE SNAKE_CASE
+      relationship_type: relationshipTypeSchema,
+      justification: z.string().trim().min(5)
+    })
+  ).default([])
+});
 
 export const vivaResponseSchema = z.object({
   transcription: z.string(),
