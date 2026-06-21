@@ -203,10 +203,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
     };
   }, []);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) 
-      return
+    if (!file) return
 
     setUploading(true)
     setParsing(true)
@@ -232,155 +231,276 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
       setDocumentText(realExtractedText)
 
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
-      const uniquePath = `${user.id}/${Date.now()}_${cleanFileName}`
+      // Ensure we fallback safely if text extraction returned blank characters
+      const cleanSnippet = realExtractedText.trim() 
+        ? realExtractedText.slice(0, 4000) 
+        : "No extractable semantic text found in PDF layout metadata."
 
-      const { error: storageError } = await supabase.storage
-        .from("documents")
-        .upload(uniquePath, file, { cacheControl: "3600", upsert: true })
+      // 1. Compute foundational research score models locally
+      const baseKeywords = detectKeywords(realExtractedText)
+      const mockReadability = computeReadabilityScore(realExtractedText)
+      const mockComplexity = computeComplexityScore(realExtractedText, totalPages || 1)
 
-      if (storageError) 
-        throw storageError
-
-      const detectedKeywords = detectKeywords(realExtractedText)
-
-      // 1. Immediately insert document record
-      const insertedRow = await researchDocumentsCrud.insertRecord({
-        owner_id: user.id,
-        title: file.name.replace(/\.[^/.]+$/, ""),
+      // 2. Save the incoming uploaded Research Document to Supabase using .insertRecord
+      const newDocRecord = await researchDocumentsCrud.insertRecord({
+        user_id: user.id,
+        title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
         file_name: file.name,
-        file_url: uniquePath,
-        file_size_bytes: file.size,
-        page_count: totalPages,
         extracted_text: realExtractedText,
-        keywords: detectedKeywords,
-        readability_score: computeReadabilityScore(realExtractedText),
-        complexity_score: computeComplexityScore(realExtractedText, totalPages),
+        page_count: totalPages || 1,
+        complexity_score: mockComplexity,
+        readability_score: mockReadability
       })
 
-      // 2. Immediately insert baseline paper node so the UI canvas grid remains reactive
-      await conceptNodesCrud.insertRecord({
-        owner_id: user.id,
-        document_id: insertedRow.id,
-        node_type: "paper",
-        label: insertedRow.title,
-        position_x: 250,
-        position_y: 200,
+      // 3. Transform the document into a base core Node for your graph view using .insertRecord
+      const targetGraphNode = await conceptNodesCrud.insertRecord({
+        user_id: user.id,
+        document_id: newDocRecord.id,
+        label: newDocRecord.title,
+        node_type: "paper", // Default base classification
+        keywords: baseKeywords,
+        summary: "Analyzing contextual concept layout..."
       })
 
-      // Pull fresh local records to display the newly added node right away
+      // 4. Query all existing context nodes currently stored in your system
+      const existingSystemNodes = await conceptNodesCrud.fetchAll()
+      
+      // Filter out our newly created node so the AI does not try to connect a paper to itself
+      const comparisonNodes = existingSystemNodes.filter(node => node.id !== targetGraphNode.id)
+
+      if (comparisonNodes.length > 0) {
+        // 5. Fire off the structured request to your patched dependency matching route!
+        const aiDependencyResult = await postAnalyzeDependencies({
+          newDoc: {
+            id: targetGraphNode.id,
+            title: targetGraphNode.label,
+            keywords: baseKeywords,
+            textSnippet: cleanSnippet
+          },
+          existingNodes: comparisonNodes.map(node => ({
+            id: node.id,
+            label: node.label,
+            node_type: node.node_type as ConceptNodeType,
+            keywords: node.keywords || [],
+            summary: node.summary || ""
+          }))
+        })
+
+        // 6. Loop through and save every academically defensible relationship edge returned by Gemini
+        if (aiDependencyResult.newEdges && aiDependencyResult.newEdges.length > 0) {
+          for (const edge of aiDependencyResult.newEdges) {
+            await conceptEdgesCrud.insertRecord({
+              user_id: user.id,
+              source_node_id: edge.source_node_id,
+              target_node_id: edge.target_node_id,
+              relationship_type: edge.relationship_type as DependencyEdge["relationship_type"],
+              justification: edge.justification
+            })
+          }
+        }
+
+        // 7. Handle any contextual structural classification changes (e.g. upgrading node types)
+        if (aiDependencyResult.newNodeType && aiDependencyResult.newNodeType !== "paper") {
+          await conceptNodesCrud.updateById(targetGraphNode.id, {
+            node_type: aiDependencyResult.newNodeType
+          })
+        }
+      }
+
+      // 8. Sync state elements and notify your graph rendering canvas to redraw lines
       await loadUserDocuments()
       if (onNodesUpdated) {
         onNodesUpdated()
       }
 
-      // 3. SLIDING TIMER DEBOUNCE BLOCK FOR BACKSTAGE METHODOLOGY LAYOUT ANALYSIS
-      if (organizationalTimerRef.current) {
-        console.log("Resetting 30s background AI window due to active file upload activity...")
-        clearTimeout(organizationalTimerRef.current)
-      }
-
-      organizationalTimerRef.current = setTimeout(async () => {
-        console.log("User inactive for 30s. Starting deferred background graph analysis...")
-        
-        // CRITICAL FIX: Capture user.id BEFORE async operations to preserve auth context
-        const capturedUserId = user.id
-        
-        try {
-          const freshNodes = await conceptNodesCrud.fetchAll()
-          const userNodes = freshNodes.filter((node) => node.owner_id === capturedUserId)
-
-          // Confirm complementary records exist before triggering relational evaluations
-          if (userNodes.length <= 1) {
-            console.log("Skipping edge analysis: only 1 node exists")
-            return
-          }
-
-          const allDocs = await researchDocumentsCrud.fetchAll()
-          const decisions = await postAnalyzeDependencies({
-            newDoc: {
-              title: insertedRow.title,
-              keywords: detectedKeywords,
-              textSnippet: realExtractedText.length > 2300 
-                ? realExtractedText.slice(300, 2300)
-                : realExtractedText.slice(300),
-            },
-            existingNodes: userNodes.map((node) => {
-              return {
-                id: node.id,
-                label: node.label,
-                node_type: node.node_type,
-                keywords: allDocs.find((d) => d.id === node.document_id)?.keywords || [],
-                summary: allDocs.find((d) => d.id === node.document_id)?.extracted_text?.slice(0, 500) || "",
-              }
-            }),
-          })
-
-          const targetUploadedNode = userNodes.find((n) => n.document_id === insertedRow.id)
-          
-          console.log("🔍 AI Dependency Analysis Results:", {
-            newEdgesCount: decisions.newEdges?.length || 0,
-            targetNodeFound: !!targetUploadedNode,
-            targetNodeId: targetUploadedNode?.id,
-          })
-          
-          if (targetUploadedNode && decisions.newEdges) {
-            for (const edge of decisions.newEdges) {
-              try {
-                // CRITICAL FIX: Use AI-provided source_node_id instead of hardcoding targetUploadedNode
-                const edgePayload = {
-                  owner_id: capturedUserId,
-                  source_node_id: edge.source_node_id,
-                  target_node_id: edge.target_node_id,
-                  relationship_type: edge.relationship_type,
-                  justification: edge.justification || null,
-                }
-                
-                console.log("📤 Attempting edge insert with payload:", edgePayload)
-                
-                const insertedEdge = await conceptEdgesCrud.insertRecord(edgePayload)
-                
-                console.log("✅ Edge inserted successfully:", insertedEdge.id)
-              } catch (edgeError) {
-                // CRITICAL FIX: Enhanced error logging with full details
-                console.error("❌ EDGE INSERT FAILED:", {
-                  error: edgeError,
-                  errorMessage: edgeError instanceof Error ? edgeError.message : String(edgeError),
-                  errorStack: edgeError instanceof Error ? edgeError.stack : undefined,
-                  attemptedPayload: {
-                    owner_id: capturedUserId,
-                    source_node_id: edge.source_node_id,
-                    target_node_id: edge.target_node_id,
-                    relationship_type: edge.relationship_type,
-                  },
-                })
-              }
-            }
-          }
-
-          await loadUserDocuments()
-          if (onNodesUpdated) {
-            onNodesUpdated()
-          }
-          console.log("✅ AI background graph layout optimization complete.")
-        } catch (aiError) {
-          console.error("❌ AI background dependency analysis failed:", {
-            error: aiError,
-            errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
-            errorStack: aiError instanceof Error ? aiError.stack : undefined,
-          })
-        }
-      }, 30000)
-
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An unexpected error occurred during document integration."
-      setErrorMsg(message)
+      console.error("Critical upload and link matching pipeline failure:", err)
+      setErrorMsg(err instanceof Error ? err.message : "Failed to execute complete document processing pipeline.")
     } finally {
       setUploading(false)
       setParsing(false)
-      if (fileInputRef.current) fileInputRef.current.value = ""
     }
-  }
+    }
+
+
+  // const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0]
+  //   if (!file) 
+  //     return
+
+  //   setUploading(true)
+  //   setParsing(true)
+  //   setErrorMsg("")
+
+  //   try {
+  //     const {
+  //       data: { user },
+  //       error: authError,
+  //     } = await supabase.auth.getUser()
+  //     if (authError || !user) throw new Error("Authentication context not found. Please log in again.")
+
+  //     let realExtractedText = ""
+  //     let totalPages = 0
+
+  //     if (file.type === "application/pdf") {
+  //       const pdfData = await extractTextFromPdf(file)
+  //       realExtractedText = pdfData.text
+  //       totalPages = pdfData.pageCount
+  //     } else {
+  //       realExtractedText = await file.text()
+  //     }
+
+  //     setDocumentText(realExtractedText)
+
+  //     const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
+  //     const uniquePath = `${user.id}/${Date.now()}_${cleanFileName}`
+
+  //     const { error: storageError } = await supabase.storage
+  //       .from("documents")
+  //       .upload(uniquePath, file, { cacheControl: "3600", upsert: true })
+
+  //     if (storageError) 
+  //       throw storageError
+
+  //     const detectedKeywords = detectKeywords(realExtractedText)
+
+  //     // 1. Immediately insert document record
+  //     const insertedRow = await researchDocumentsCrud.insertRecord({
+  //       owner_id: user.id,
+  //       title: file.name.replace(/\.[^/.]+$/, ""),
+  //       file_name: file.name,
+  //       file_url: uniquePath,
+  //       file_size_bytes: file.size,
+  //       page_count: totalPages,
+  //       extracted_text: realExtractedText,
+  //       keywords: detectedKeywords,
+  //       readability_score: computeReadabilityScore(realExtractedText),
+  //       complexity_score: computeComplexityScore(realExtractedText, totalPages),
+  //     })
+
+  //     // 2. Immediately insert baseline paper node so the UI canvas grid remains reactive
+  //     await conceptNodesCrud.insertRecord({
+  //       owner_id: user.id,
+  //       document_id: insertedRow.id,
+  //       node_type: "paper",
+  //       label: insertedRow.title,
+  //       position_x: 250,
+  //       position_y: 200,
+  //     })
+
+  //     // Pull fresh local records to display the newly added node right away
+  //     await loadUserDocuments()
+  //     if (onNodesUpdated) {
+  //       onNodesUpdated()
+  //     }
+
+  //     // 3. SLIDING TIMER DEBOUNCE BLOCK FOR BACKSTAGE METHODOLOGY LAYOUT ANALYSIS
+  //     if (organizationalTimerRef.current) {
+  //       console.log("Resetting 30s background AI window due to active file upload activity...")
+  //       clearTimeout(organizationalTimerRef.current)
+  //     }
+
+  //     organizationalTimerRef.current = setTimeout(async () => {
+  //       console.log("User inactive for 30s. Starting deferred background graph analysis...")
+        
+  //       // CRITICAL FIX: Capture user.id BEFORE async operations to preserve auth context
+  //       const capturedUserId = user.id
+        
+  //       try {
+  //         const freshNodes = await conceptNodesCrud.fetchAll()
+  //         const userNodes = freshNodes.filter((node) => node.owner_id === capturedUserId)
+
+  //         // Confirm complementary records exist before triggering relational evaluations
+  //         if (userNodes.length <= 1) {
+  //           console.log("Skipping edge analysis: only 1 node exists")
+  //           return
+  //         }
+
+  //         const allDocs = await researchDocumentsCrud.fetchAll()
+  //         const decisions = await postAnalyzeDependencies({
+  //           newDoc: {
+  //             title: insertedRow.title,
+  //             keywords: detectedKeywords,
+  //             textSnippet: realExtractedText.length > 2300 
+  //               ? realExtractedText.slice(300, 2300)
+  //               : realExtractedText.slice(300),
+  //           },
+  //           existingNodes: userNodes.map((node) => {
+  //             return {
+  //               id: node.id,
+  //               label: node.label,
+  //               node_type: node.node_type,
+  //               keywords: allDocs.find((d) => d.id === node.document_id)?.keywords || [],
+  //               summary: allDocs.find((d) => d.id === node.document_id)?.extracted_text?.slice(0, 500) || "",
+  //             }
+  //           }),
+  //         })
+
+  //         const targetUploadedNode = userNodes.find((n) => n.document_id === insertedRow.id)
+          
+  //         console.log("🔍 AI Dependency Analysis Results:", {
+  //           newEdgesCount: decisions.newEdges?.length || 0,
+  //           targetNodeFound: !!targetUploadedNode,
+  //           targetNodeId: targetUploadedNode?.id,
+  //         })
+          
+  //         if (targetUploadedNode && decisions.newEdges) {
+  //           for (const edge of decisions.newEdges) {
+  //             try {
+  //               // CRITICAL FIX: Use AI-provided source_node_id instead of hardcoding targetUploadedNode
+  //               const edgePayload = {
+  //                 owner_id: capturedUserId,
+  //                 source_node_id: edge.source_node_id,
+  //                 target_node_id: edge.target_node_id,
+  //                 relationship_type: edge.relationship_type,
+  //                 justification: edge.justification || null,
+  //               }
+                
+  //               console.log("📤 Attempting edge insert with payload:", edgePayload)
+                
+  //               const insertedEdge = await conceptEdgesCrud.insertRecord(edgePayload)
+                
+  //               console.log("✅ Edge inserted successfully:", insertedEdge.id)
+  //             } catch (edgeError) {
+  //               // CRITICAL FIX: Enhanced error logging with full details
+  //               console.error("❌ EDGE INSERT FAILED:", {
+  //                 error: edgeError,
+  //                 errorMessage: edgeError instanceof Error ? edgeError.message : String(edgeError),
+  //                 errorStack: edgeError instanceof Error ? edgeError.stack : undefined,
+  //                 attemptedPayload: {
+  //                   owner_id: capturedUserId,
+  //                   source_node_id: edge.source_node_id,
+  //                   target_node_id: edge.target_node_id,
+  //                   relationship_type: edge.relationship_type,
+  //                 },
+  //               })
+  //             }
+  //           }
+  //         }
+
+  //         await loadUserDocuments()
+  //         if (onNodesUpdated) {
+  //           onNodesUpdated()
+  //         }
+  //         console.log("✅ AI background graph layout optimization complete.")
+  //       } catch (aiError) {
+  //         console.error("❌ AI background dependency analysis failed:", {
+  //           error: aiError,
+  //           errorMessage: aiError instanceof Error ? aiError.message : String(aiError),
+  //           errorStack: aiError instanceof Error ? aiError.stack : undefined,
+  //         })
+  //       }
+  //     }, 30000)
+
+  //   } catch (err) {
+  //     const message = err instanceof Error ? err.message : "An unexpected error occurred during document integration."
+  //     setErrorMsg(message)
+  //   } finally {
+  //     setUploading(false)
+  //     setParsing(false)
+  //     if (fileInputRef.current) fileInputRef.current.value = ""
+  //   }
+  // }
   
   const executeChatStream = async (promptText: string) => {
     if (!activeDoc || sendingChat) return
