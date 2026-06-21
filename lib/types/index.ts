@@ -37,6 +37,8 @@ export interface ConceptNodeRow {
   node_type: ConceptNodeType
   label: string
   description: string | null
+  keywords: string[]
+  summary: string | null
   position_x: number
   position_y: number
   viva_score: number | null
@@ -110,6 +112,7 @@ export interface SummarizeResponse {
 }
 
 export interface AnalyzeDependenciesNewDoc {
+  id: string
   title: string
   keywords: string[]
   textSnippet: string
@@ -119,6 +122,8 @@ export interface AnalyzeDependenciesExistingNode {
   id: string
   label: string
   node_type: ConceptNodeType
+  keywords: string[]
+  summary?: string
 }
 
 export interface AnalyzeDependenciesRequest {

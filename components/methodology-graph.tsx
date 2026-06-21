@@ -329,9 +329,9 @@ export function MethodologyGraph() {
                 <p className="text-sm font-semibold text-card-foreground">Relational Methodology Web Canvas</p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs">
-                <Legend color="bg-[#742A2A]" label="Paper Structure" />
-                <Legend color="bg-[#EAB308]" label="Core Prerequisite" />
-                <Legend color="border-2 border-dashed border-[#EAB308] bg-card" label="Identified Gap" />
+                <Legend color="bg-slate-700" label="Paper Structure" />
+                <Legend color="bg-blue-500" label="Core Prerequisite" />
+                <Legend color="border-2 border-dashed border-red-500 bg-card" label="Identified Gap" />
               </div>
             </div>
 
@@ -349,66 +349,81 @@ export function MethodologyGraph() {
                 </div>
               ) : (
                 <>
-                  <svg className="absolute inset-0 h-full w-full pointer-events-none" aria-hidden="true">
+                  <svg className="absolute inset-0 h-full w-full pointer-events-none z-0" aria-hidden="true">
                     <defs>
-                      <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#EAB308" />
+                      <marker id="arrow-prerequisite" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+                      </marker>
+                      <marker id="arrow-gap" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
                       </marker>
                     </defs>
 
-                    {conceptEdges.map(edge => {
-                      const source = nodes.find(n => n.id === edge.source_node_id)
-                      const target = nodes.find(n => n.id === edge.target_node_id)
+                    {conceptEdges.map((edge) => {
+                      const sourceNode = nodes.find((n) => n.id === edge.source_node_id)
+                      const targetNode = nodes.find((n) => n.id === edge.target_node_id)
 
-                      if (!source || !target) return null
+                      if (!sourceNode || !targetNode) return null
+
+                      const isPrereq = edge.relationship_type === "prerequisite"
 
                       return (
-                        <line
-                          key={edge.id}
-                          x1={source.x}
-                          y1={source.y}
-                          x2={target.x}
-                          y2={target.y}
-                          stroke="#EAB308"
-                          strokeWidth={2}
-                          markerEnd="url(#arrow)"
-                          strokeDasharray={edge.relationship_type === "research_gap" ? "5 5" : undefined}
-                          className="opacity-75"
-                        />
+                        <g key={edge.id}>
+                          <line
+                            x1={sourceNode.x}
+                            y1={sourceNode.y}
+                            x2={targetNode.x}
+                            y2={targetNode.y}
+                            stroke={isPrereq ? "#3b82f6" : "#ef4444"}
+                            strokeWidth={isPrereq ? 2.5 : 2}
+                            strokeDasharray={isPrereq ? undefined : "5 5"}
+                            markerEnd={isPrereq ? "url(#arrow-prerequisite)" : "url(#arrow-gap)"}
+                            className="opacity-75"
+                          />
+                          <circle 
+                            cx={(sourceNode.x + targetNode.x) / 2} 
+                            cy={(sourceNode.y + targetNode.y) / 2} 
+                            r="5" 
+                            className="fill-white stroke-slate-400"
+                          />
+                        </g>
                       )
                     })}
                   </svg>
 
-                  {nodes.map((node) => {
-                    const isSelected = selectedNode?.id === node.id
-                    const Icon = node.node_type === "paper" ? FileText : node.node_type === "prerequisite" ? Layers : Lightbulb
-                    return (
-                      <button
-                        key={node.id}
-                        type="button"
-                        onClick={() => setSelectedNode(node)}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95"
-                        style={{ left: `${node.x}px`, top: `${node.y}px`, zIndex: isSelected ? 30 : 10 }}
-                      >
-                        <div
-                          className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
-                            isSelected
-                              ? "ring-4 ring-white border-white scale-105"
-                              : "hover:scale-105"
-                          } ${
-                            node.node_type === "paper"
-                              ? "bg-[#742A2A] text-white border-[#742A2A]"
-                              : node.node_type === "prerequisite"
-                                ? "bg-[#EAB308] text-slate-950 border-[#EAB308]"
-                                : "border-2 border-dashed border-[#EAB308] bg-card text-foreground"
-                          }`}
+                  <div className="absolute inset-0 z-10 pointer-events-none">
+                    {nodes.map((node) => {
+                      const isSelected = selectedNode?.id === node.id
+                      const Icon = node.node_type === "paper" ? FileText : node.node_type === "prerequisite" ? Layers : Lightbulb
+                      
+                      return (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => setSelectedNode(node)}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95 pointer-events-auto"
+                          style={{ left: `${node.x}px`, top: `${node.y}px` }}
                         >
-                          <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                          <span className="leading-tight text-left truncate max-w-[120px]">{node.label}</span>
-                        </div>
-                      </button>
-                    )
-                  })}
+                          <div
+                            className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
+                              isSelected
+                                ? "ring-4 ring-indigo-500 scale-105"
+                                : "hover:scale-105"
+                            } ${
+                              node.node_type === "prerequisite"
+                                ? "bg-blue-500 text-white border-blue-500"
+                                : node.node_type === "research_gap"
+                                  ? "bg-red-500 text-white border-red-500"
+                                  : "bg-slate-700 text-white border-slate-700"
+                            }`}
+                          >
+                            <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                            <span className="leading-tight text-left truncate max-w-[120px]">{node.label}</span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </>
               )}
             </div>
@@ -547,14 +562,6 @@ export function MethodologyGraph() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
                     <label className="block text-[11px] font-medium text-muted-foreground">Socratic Query Statement</label>
-                    <Tooltip>
-                      <TooltipTrigger type="button" className="text-muted-foreground hover:text-primary transition-colors">
-                        <Info className="size-3" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-[10px]">
-                        Log the explicit concept question asked during the defense timeline stream.
-                      </TooltipContent>
-                    </Tooltip>
                   </div>
                   <input
                     type="text"
@@ -568,17 +575,7 @@ export function MethodologyGraph() {
 
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <label className="block text-[11px] font-medium text-muted-foreground">
-                      Candidate Oral Response Evaluation
-                    </label>
-                    <Tooltip>
-                      <TooltipTrigger type="button" className="text-muted-foreground hover:text-primary transition-colors">
-                        <Info className="size-3" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-[10px]">
-                        Input detailed graded remarks regarding structural phrasing accuracy and logical completeness.
-                      </TooltipContent>
-                    </Tooltip>
+                    <label className="block text-[11px] font-medium text-muted-foreground">Candidate Oral Response Evaluation</label>
                   </div>
                   <textarea
                     required
