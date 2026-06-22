@@ -205,7 +205,7 @@ shadcn/ui components built on Radix UI primitives and styled with Tailwind CSS. 
 Centralized type definitions for the application domain:
 
 - `User` — Supabase auth user + profile (role, full_name, academic_domain)
-- `ResearchDocument` — Uploaded PDF metadata (id, user_id, file_name, page_count, metrics, summary)
+- `ResearchDocument` — Uploaded PDF metadata (id, owner_id, file_name, page_count, metrics, summary)
 - `ConceptNode` — Graph node (id, document_id, type, label, description, position)
 - `ClassSection` — Faculty-created class (id, teacher_id, section_name, invite_code)
 - `SectionEnrollment` — Student enrollment record (id, section_id, student_id)

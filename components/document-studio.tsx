@@ -243,7 +243,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
       // 2. Save the incoming uploaded Research Document to Supabase using .insertRecord
       const newDocRecord = await researchDocumentsCrud.insertRecord({
-        user_id: user.id,
+        owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
         file_name: file.name,
         extracted_text: realExtractedText,
@@ -254,7 +254,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
       // 3. Transform the document into a base core Node for your graph view using .insertRecord
       const targetGraphNode = await conceptNodesCrud.insertRecord({
-        user_id: user.id,
+        owner_id: user.id,
         document_id: newDocRecord.id,
         label: newDocRecord.title,
         node_type: "paper", // Default base classification
@@ -290,7 +290,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         if (aiDependencyResult.newEdges && aiDependencyResult.newEdges.length > 0) {
           for (const edge of aiDependencyResult.newEdges) {
             await conceptEdgesCrud.insertRecord({
-              user_id: user.id,
+              owner_id: user.id,
               source_node_id: edge.source_node_id,
               target_node_id: edge.target_node_id,
               relationship_type: edge.relationship_type as DependencyEdge["relationship_type"],
