@@ -38,9 +38,10 @@ export function Sidebar({
   name?: string | null
   role?: string | null
 }) {
-  // Filters out access elements and strictly distributes view paths based on authorization credentials
+  // Filters out access elements and strictly distributes view paths based on authorization credentials.
+  // Faculty can see all workspace modules; students see only studio & graph (portal is hidden).
   const visibleNav = authed
-    ? NAV.filter((item) => (canAccessPortal ? item.key === "portal" : item.key !== "portal"))
+    ? NAV.filter((item) => (canAccessPortal ? true : item.key !== "portal"))
     : []
 
   // Helper logic to cleanly extract double initials from names dynamically
