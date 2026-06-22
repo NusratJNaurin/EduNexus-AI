@@ -116,7 +116,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
     setLoadingSummary(true)
     try {
-      const data = await postSummarize({ text, fileName })
+      // Truncate text to 49000 chars to safely satisfy the API schema's max(50000) constraint
+      const safeText = text.slice(0, 49000)
+      const data = await postSummarize({ text: safeText, fileName })
       setDocumentSummary(data.summary)
       localStorage.setItem(`summary_${docId}`, data.summary)
     } catch (err) {
