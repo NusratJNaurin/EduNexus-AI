@@ -9,6 +9,8 @@ interface PdfVisualViewerProps {
 
 export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const isRemoteUrl = !!fileUrl && /^https?:\/\//i.test(fileUrl)
 
   useEffect(() => {
@@ -16,25 +18,49 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
 
     const resolveUrl = async () => {
       if (!fileUrl) {
+        console.log("[PdfVisualViewer] No fileUrl provided, showing empty state.")
         setResolvedUrl(null)
+        setError(null)
         return
       }
+
+      setLoading(true)
+      setError(null)
 
       if (isRemoteUrl) {
+        console.log("[PdfVisualViewer] Using direct remote URL:", fileUrl.slice(0, 80))
         setResolvedUrl(fileUrl)
+        setLoading(false)
         return
       }
 
-      const { data, error } = await supabase.storage.from("documents").createSignedUrl(fileUrl, 60 * 10)
+      console.log("[PdfVisualViewer] Resolving storage path to signed URL:", fileUrl)
+
+      const { data, error: signError } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(fileUrl, 60 * 10)
 
       if (!isMounted) return
 
-      if (error || !data?.signedUrl) {
+      if (signError) {
+        console.error("[PdfVisualViewer] Signed URL creation failed:", signError.message)
+        setError(signError.message)
         setResolvedUrl(null)
+        setLoading(false)
         return
       }
 
+      if (!data?.signedUrl) {
+        console.error("[PdfVisualViewer] Signed URL returned empty.")
+        setError("Signed URL could not be generated.")
+        setResolvedUrl(null)
+        setLoading(false)
+        return
+      }
+
+      console.log("[PdfVisualViewer] Signed URL resolved successfully, length:", data.signedUrl.length)
       setResolvedUrl(data.signedUrl)
+      setLoading(false)
     }
 
     void resolveUrl()
@@ -52,7 +78,15 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
     )
   }
 
-  if (!resolvedUrl) {
+  if (error) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-destructive/30 bg-destructive/10 text-xs text-destructive px-4 text-center">
+        Failed to load PDF: {error}
+      </div>
+    )
+  }
+
+  if (loading || !resolvedUrl) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
         Preparing private file access...
@@ -67,88 +101,8 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
         src={`${resolvedUrl}#toolbar=1&navpanes=0`}
         className="h-[600px] w-full rounded-lg bg-background shadow-xs"
         title="PDF Document Viewer"
+        onError={() => console.error("[PdfVisualViewer] iframe failed to load PDF at:", resolvedUrl.slice(0, 80))}
       />
     </div>
   )
 }
-
-// import { useState } from "react"
-// import { Document, Page, pdfjs } from "react-pdf"
-// import { Button } from "@/components/ui/button"
-// import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
-
-// // Point the worker to the exact version matching your package bundle
-// pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@6.0.227/build/pdf.worker.min.mjs`
-
-// interface PdfVisualViewerProps {
-//   fileUrl: string | null
-// }
-
-// export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
-//   const [numPages, setNumPages] = useState<number | null>(null)
-//   const [pageNumber, setPageNumber] = useState<number>(1)
-
-//   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-//     setNumPages(numPages)
-//     setPageNumber(1)
-//   }
-
-//   if (!fileUrl) {
-//     return (
-//       <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
-//         No remote file URL associated with this record.
-//       </div>
-//     )
-//   }
-
-//   return (
-//     <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/10 p-4">
-//       {/* Document Canvas Container */}
-//       <div className="max-h-[500px] w-full overflow-y-auto rounded-lg border bg-background p-2 shadow-inner flex justify-center">
-//         <Document
-//           file={fileUrl}
-//           onLoadSuccess={onDocumentLoadSuccess}
-//           loading={
-//             <div className="flex items-center gap-2 py-8 text-xs text-muted-foreground">
-//               <Loader2 className="size-4 animate-spin text-primary" /> Rendering canvas map...
-//             </div>
-//           }
-//         >
-//           <Page 
-//             pageNumber={pageNumber} 
-//             renderTextLayer={false} // Disables text selection highlights if not needed
-//             renderAnnotationLayer={false} // Disables interactive form fields/links
-//             width={400} // Set a strict width scale or use responsive resize observers
-//           />
-//         </Document>
-//       </div>
-
-//       {/* Pagination Controls Footer */}
-//       {numPages && numPages > 1 && (
-//         <div className="flex items-center gap-4 border-t pt-2 w-full justify-center">
-//           <Button
-//             variant="outline"
-//             size="icon"
-//             disabled={pageNumber <= 1}
-//             onClick={() => setPageNumber((prev) => Math.max(prev - 1, 1))}
-//             className="size-8"
-//           >
-//             <ChevronLeft className="size-4" />
-//           </Button>
-//           <p className="text-xs font-mono">
-//             Page {pageNumber} of {numPages}
-//           </p>
-//           <Button
-//             variant="outline"
-//             size="icon"
-//             disabled={pageNumber >= numPages}
-//             onClick={() => setPageNumber((prev) => Math.min(prev + 1, numPages))}
-//             className="size-8"
-//           >
-//             <ChevronRight className="size-4" />
-//           </Button>
-//         </div>
-//       )}
-//     </div>
-//   )
-// }

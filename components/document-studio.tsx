@@ -233,6 +233,14 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
       setDocumentText(realExtractedText)
 
+      // 0. Upload the actual PDF file to Supabase Storage so PdfVisualViewer can display it
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
+      const storagePath = `${user.id}/${Date.now()}_${cleanFileName}`
+      const { error: storageError } = await supabase.storage
+        .from("documents")
+        .upload(storagePath, file, { cacheControl: "3600", upsert: true })
+      if (storageError) throw storageError
+
       // Ensure we fallback safely if text extraction returned blank characters
       const cleanSnippet = realExtractedText.trim() 
         ? realExtractedText.slice(0, 4000) 
@@ -244,10 +252,13 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
       const mockComplexity = computeComplexityScore(realExtractedText, totalPages || 1)
 
       // 2. Save the incoming uploaded Research Document to Supabase using .insertRecord
+      //    file_url stores the storage path so PdfVisualViewer can resolve it to a signed URL
       const newDocRecord = await researchDocumentsCrud.insertRecord({
         owner_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "),
         file_name: file.name,
+        file_url: storagePath,
+        file_size_bytes: file.size,
         extracted_text: realExtractedText,
         page_count: totalPages || 1,
         complexity_score: mockComplexity,
