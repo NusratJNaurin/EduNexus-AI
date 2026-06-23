@@ -90,6 +90,7 @@ create table if not exists public.concept_nodes (
   label         text not null,
   description   text,
   keywords      text[] not null default '{}',
+  summary       text,
   position_x    numeric(8,2) not null default 0,
   position_y    numeric(8,2) not null default 0,
   viva_score    numeric(5,2),
