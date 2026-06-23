@@ -1,4 +1,4 @@
-import { generateJsonFromAudio } from "@/lib/api/gemini"
+import { generateJsonFromAudio, ServiceUnavailableError } from "@/lib/api/gemini"
 import { getErrorMessage, jsonError, jsonOk } from "@/lib/api/response"
 import { validateVivaFormData, vivaResponseSchema } from "@/lib/api/validation"
 
@@ -28,6 +28,9 @@ You MUST respond strictly with a valid JSON object containing exactly two fields
     })
   } catch (error) {
     console.error("Viva API error:", error)
-    return jsonError(getErrorMessage(error), error instanceof Error && error.message.includes("configured") ? 503 : 400)
+    if (error instanceof ServiceUnavailableError) {
+      return jsonError(getErrorMessage(error), 503)
+    }
+    return jsonError(getErrorMessage(error), 400)
   }
 }

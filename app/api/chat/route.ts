@@ -1,4 +1,4 @@
-import { generateText } from "@/lib/api/gemini"
+import { generateText, ServiceUnavailableError } from "@/lib/api/gemini"
 import { getErrorMessage, jsonError, jsonOk } from "@/lib/api/response"
 import { chatRequestSchema, parseJsonBody } from "@/lib/api/validation"
 
@@ -37,6 +37,9 @@ ${prompt}`
     return jsonOk({ reply })
   } catch (error) {
     console.error("Chat API error:", error)
-    return jsonError(getErrorMessage(error), error instanceof Error && error.message.includes("configured") ? 503 : 400)
+    if (error instanceof ServiceUnavailableError) {
+      return jsonError(getErrorMessage(error), 503)
+    }
+    return jsonError(getErrorMessage(error), 400)
   }
 }

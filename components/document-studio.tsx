@@ -21,6 +21,7 @@ import { postAnalyzeDependencies, postChat, postSummarize } from "@/lib/api-clie
 import { usePersistedMessages } from "@/hooks/use-api"
 import type { ChatMessage, ConceptNodeType, DependencyEdge, ResearchDocumentRow } from "@/lib/types"
 import { PdfVisualViewer } from "./PdfVisualViewer"
+import { toast } from "sonner"
 import { z } from "zod"
 import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
 export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
@@ -123,6 +124,10 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
       localStorage.setItem(`summary_${docId}`, data.summary)
     } catch (err) {
       console.error("Failed to fetch concise summary:", err)
+      const message = err instanceof Error ? err.message : ""
+      if (message.includes("temporarily busy") || message.includes("Service Unavailable")) {
+        toast.warning("The AI engine is temporarily busy. Please try generating your summary again in a moment")
+      }
       setDocumentSummary("Unable to parse a dynamic summary for this asset.")
     } finally {
       setLoadingSummary(false)

@@ -1,6 +1,80 @@
 import { GoogleGenAI } from "@google/genai"
 
 const MODEL = "gemini-2.5-flash"
+const MAX_RETRIES = 3
+const BASE_DELAY_MS = 500
+
+export class ServiceUnavailableError extends Error {
+  constructor(message = "The AI engine is temporarily busy. Please try generating your summary again in a moment.") {
+    super(message)
+    this.name = "ServiceUnavailableError"
+  }
+}
+
+/**
+ * Determines whether an error represents a 503 Service Unavailable from Gemini.
+ * Supports both the @google/genai SDK and raw fetch error shapes.
+ */
+function isServiceUnavailable(error: unknown): boolean {
+  if (error instanceof ServiceUnavailableError) return true
+
+  // @google/genai SDK errors have a status property
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status: number | string }).status
+    if (Number(status) === 503) return true
+  }
+
+  // Raw fetch Response errors via message inspection
+  if (error instanceof Error && error.message.includes("503")) return true
+
+  return false
+}
+
+/**
+ * Sleeps for the given number of milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Wraps a promise-returning function with exponential-backoff retry logic for 503 errors.
+ *
+ * @param fn  - The async function to call (e.g. () => ai.models.generateContent(...))
+ * @param label - A short label for log messages (e.g. "generateText")
+ * @returns The result of the wrapped function
+ * @throws ServiceUnavailableError if all retries are exhausted
+ * @throws The original error if it is NOT a 503
+ */
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+
+      if (!isServiceUnavailable(error)) {
+        // Not a 503 — rethrow immediately
+        throw error
+      }
+
+      if (attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt) // 500, 1000, 2000
+        console.warn(
+          `[Gemini] ${label} attempt ${attempt + 1} failed with 503. ` +
+          `Retrying in ${delay}ms...`,
+        )
+        await sleep(delay)
+      }
+    }
+  }
+
+  // All retries exhausted
+  console.error(`[Gemini] ${label} failed after ${MAX_RETRIES + 1} attempts (503).`)
+  throw new ServiceUnavailableError()
+}
 
 export function getGeminiApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY
@@ -15,120 +89,135 @@ export function createGeminiClient(): GoogleGenAI {
 }
 
 export async function generateText(prompt: string): Promise<string> {
-  const ai = createGeminiClient()
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-  })
-  return (response.text ?? "").trim()
+  const result = await withRetry(async () => {
+    const ai = createGeminiClient()
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+    })
+    return (response.text ?? "").trim()
+  }, "generateText")
+
+  return result
 }
 
 export async function generateJson<T>(prompt: string, schema: { parse: (value: unknown) => T }): Promise<T> {
-  const ai = createGeminiClient()
-  
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      // Forces Gemini 2.5 to perfectly align its keys with whatever Zod layout you provide:
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          newNodeType: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] },
-          updatedExistingNodes: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                id: { type: "STRING" },
-                node_type: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] }
-              },
-              required: ["id", "node_type"]
+  const result = await withRetry(async () => {
+    const ai = createGeminiClient()
+
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        // Forces Gemini 2.5 to perfectly align its keys with whatever Zod layout you provide:
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            newNodeType: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] },
+            updatedExistingNodes: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  id: { type: "STRING" },
+                  node_type: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] }
+                },
+                required: ["id", "node_type"]
+              }
+            },
+            newEdges: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  source_node_id: { type: "STRING" },
+                  target_node_id: { type: "STRING" },
+                  relationship_type: { type: "STRING", enum: ["prerequisite", "research_gap"] },
+                  justification: { type: "STRING" }
+                },
+                required: ["source_node_id", "target_node_id", "relationship_type", "justification"]
+              }
             }
           },
-          newEdges: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                source_node_id: { type: "STRING" },
-                target_node_id: { type: "STRING" },
-                relationship_type: { type: "STRING", enum: ["prerequisite", "research_gap"] },
-                justification: { type: "STRING" }
-              },
-              required: ["source_node_id", "target_node_id", "relationship_type", "justification"]
-            }
-          }
-        },
-        required: ["newNodeType", "updatedExistingNodes", "newEdges"]
-      }
-    },
-  })
+          required: ["newNodeType", "updatedExistingNodes", "newEdges"]
+        }
+      },
+    })
 
-  const raw = response.text?.trim()
-  if (!raw) {
-    throw new Error("The AI model returned an empty response.")
-  }
+    const raw = response.text?.trim()
+    if (!raw) {
+      throw new Error("The AI model returned an empty response.")
+    }
 
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    throw new Error("The AI model returned malformed JSON.")
-  }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      throw new Error("The AI model returned malformed JSON.")
+    }
 
-  return schema.parse(parsed)
+    return schema.parse(parsed)
+  }, "generateJson")
+
+  return result
 }
-
 
 export async function generateJsonFromAudio(
   prompt: string,
   base64Audio: string,
   mimeType: string,
 ): Promise<string> {
-  const apiKey = getGeminiApiKey()
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+  const result = await withRetry(async () => {
+    const apiKey = getGeminiApiKey()
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType,
-                data: base64Audio,
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Audio,
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
         },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    }),
-  })
+      }),
+    })
 
-  const data: {
-    error?: { message?: string }
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-  } = await response.json()
+    const data: {
+      error?: { message?: string }
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    } = await response.json()
 
-  if (!response.ok) {
-    throw new Error(data.error?.message ?? "Gemini audio processing failed.")
-  }
+    if (!response.ok) {
+      // Wrap fetch-level 503 so the retry loop catches it
+      if (response.status === 503) {
+        throw new ServiceUnavailableError(data.error?.message ?? "Service Unavailable")
+      }
+      throw new Error(data.error?.message ?? "Gemini audio processing failed.")
+    }
 
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!rawText) {
-    throw new Error("The AI model returned an empty audio analysis.")
-  }
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!rawText) {
+      throw new Error("The AI model returned an empty audio analysis.")
+    }
 
-  return rawText
+    return rawText
+  }, "generateJsonFromAudio")
+
+  return result
 }
 
 export interface ExistingDocumentContext {
@@ -151,13 +240,14 @@ export async function identifyDocumentConnections(
   newDocText: string,
   existingDocs: ExistingDocumentContext[]
 ): Promise<DocumentRelationship[]> {
-  const ai = createGeminiClient();
+  const result = await withRetry(async () => {
+    const ai = createGeminiClient();
 
-  if (existingDocs.length === 0) {
-    return []; // Nothing to connect to yet
-  }
+    if (existingDocs.length === 0) {
+      return []; // Nothing to connect to yet
+    }
 
-  const prompt = `
+    const prompt = `
 You are an advanced academic research assistant. Your task is to analyze a newly uploaded research document and determine its relationship to a catalog of existing documents.
 
 NEW DOCUMENT TITLE: 
@@ -177,32 +267,35 @@ Analyze the new document and determine if it has any of these relationships with
 Only return items where a genuine, strong connection is found. Provide a brief 1-2 sentence justification for each connection.
 `;
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      // Enforcing structural output means Gemini will ALWAYS format the data correctly
-      responseSchema: {
-        type: "ARRAY",
-        items: {
-          type: "OBJECT",
-          properties: {
-            targetDocumentId: { type: "STRING" },
-            relationshipType: { 
-              type: "STRING", 
-              enum: ["prerequisite", "research_gap", "citation"] 
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        // Enforcing structural output means Gemini will ALWAYS format the data correctly
+        responseSchema: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              targetDocumentId: { type: "STRING" },
+              relationshipType: { 
+                type: "STRING", 
+                enum: ["prerequisite", "research_gap", "citation"] 
+              },
+              justification: { type: "STRING" }
             },
-            justification: { type: "STRING" }
-          },
-          required: ["targetDocumentId", "relationshipType", "justification"]
+            required: ["targetDocumentId", "relationshipType", "justification"]
+          }
         }
-      }
-    },
-  });
+      },
+    });
 
-  const raw = response.text?.trim();
-  if (!raw) return [];
+    const raw = response.text?.trim();
+    if (!raw) return [];
 
-  return JSON.parse(raw) as DocumentRelationship[];
+    return JSON.parse(raw) as DocumentRelationship[];
+  }, "identifyDocumentConnections")
+
+  return result
 }

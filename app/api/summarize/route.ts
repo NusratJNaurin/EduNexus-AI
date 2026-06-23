@@ -1,4 +1,4 @@
-import { generateText } from "@/lib/api/gemini"
+import { generateText, ServiceUnavailableError } from "@/lib/api/gemini"
 import { getErrorMessage, jsonError, jsonOk } from "@/lib/api/response"
 import { parseJsonBody, summarizeRequestSchema } from "@/lib/api/validation"
 
@@ -23,6 +23,9 @@ ${text.slice(0, 7000)}`
     return jsonOk({ summary: summary || "No summary could be generated for this document." })
   } catch (error) {
     console.error("Summarize API error:", error)
-    return jsonError(getErrorMessage(error), error instanceof Error && error.message.includes("configured") ? 503 : 400)
+    if (error instanceof ServiceUnavailableError) {
+      return jsonError(getErrorMessage(error), 503)
+    }
+    return jsonError(getErrorMessage(error), 400)
   }
 }

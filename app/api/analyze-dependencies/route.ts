@@ -1,4 +1,4 @@
-import { generateJson } from "@/lib/api/gemini"
+import { generateJson, ServiceUnavailableError } from "@/lib/api/gemini"
 import { getErrorMessage, jsonError, jsonOk } from "@/lib/api/response"
 import {
   analyzeDependenciesRequestSchema,
@@ -103,9 +103,9 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error("Analyze dependencies API error:", error)
-    return jsonError(
-      getErrorMessage(error), 
-      error instanceof Error && error.message.includes("configured") ? 503 : 400
-    )
+    if (error instanceof ServiceUnavailableError) {
+      return jsonError(getErrorMessage(error), 503)
+    }
+    return jsonError(getErrorMessage(error), 400)
   }
 }
