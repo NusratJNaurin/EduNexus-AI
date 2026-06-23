@@ -89,6 +89,7 @@ create table if not exists public.concept_nodes (
   node_type     concept_node_type not null default 'paper',
   label         text not null,
   description   text,
+  keywords      text[] not null default '{}',
   position_x    numeric(8,2) not null default 0,
   position_y    numeric(8,2) not null default 0,
   viva_score    numeric(5,2),
