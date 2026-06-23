@@ -39,6 +39,10 @@ export interface ConceptNodeRow {
   description: string | null
   keywords: string[]
   summary: string | null
+  main_concepts: string[]
+  prerequisite_concepts: string[]
+  learning_objectives: string[]
+  is_knowledge_bearing: boolean
   position_x: number
   position_y: number
   viva_score: number | null
@@ -109,6 +113,10 @@ export interface SummarizeRequest {
 
 export interface SummarizeResponse {
   summary: string
+  main_concepts: string[]
+  prerequisite_concepts: string[]
+  learning_objectives: string[]
+  is_knowledge_bearing: boolean
 }
 
 export interface AnalyzeDependenciesNewDoc {
