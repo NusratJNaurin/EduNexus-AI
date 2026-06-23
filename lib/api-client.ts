@@ -47,6 +47,18 @@ export async function postAnalyzeDependencies(
   return parseResponse<AnalyzeDependenciesResponse>(response)
 }
 
+export async function postInferDependencies(body: {
+  newNodeId: string
+  prerequisiteConcepts: string[]
+}): Promise<{ edges: Array<{ source_node_id: string; target_node_id: string; relationship_type: string; justification: string }> }> {
+  const response = await fetch("/api/infer-dependencies", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseResponse(response)
+}
+
 export async function postViva(formData: FormData): Promise<VivaResponse> {
   const response = await fetch("/api/viva", {
     method: "POST",
