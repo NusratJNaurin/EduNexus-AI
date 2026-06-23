@@ -23,7 +23,7 @@ import { conceptNodesCrud, conceptEdgesCrud } from "@/lib/crud"
 import { postChat, postViva } from "@/lib/api-client"
 import type { ConceptNodeRow, ConceptNodeType, VivaFeedbackItem, ConceptEdgeRow } from "@/lib/types"
 import { parseVivaFeedback, serializeVivaFeedback } from "@/lib/types"
-
+import { computeForceLayout } from "@/lib/force-layout"
 
 interface GraphNode {
   id: string
@@ -36,35 +36,7 @@ interface GraphNode {
   keywords: string[]
 }
 
-const CANVAS_WIDTH = 800
-const CANVAS_HEIGHT = 600
-
-function mapConceptNodeToGraphNode(item: ConceptNodeRow, index: number, totalCount: number): GraphNode {
-  let x = CANVAS_WIDTH / 2
-  let y = 300
-
-  if (item.node_type === "prerequisite") {
-    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
-    y = 100 
-  } else if (item.node_type === "paper") {
-    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 120 + (index * ((CANVAS_WIDTH - 240) / Math.max(1, totalCount - 1)))
-    y = 300 
-  } else {
-    x = totalCount <= 1 ? CANVAS_WIDTH / 2 : 160 + (index * ((CANVAS_WIDTH - 320) / Math.max(1, totalCount - 1)))
-    y = 500 
-  }
-
-  return {
-    id: item.id,
-    owner_id: item.owner_id,
-    x: item.position_x || x,
-    y: item.position_y || y,
-    label: item.label || "Unnamed Concept Parameter",
-    node_type: item.node_type,
-    viva_feedback: parseVivaFeedback(item.viva_feedback),
-    keywords: (item as any).keywords || [],
-  }
-}
+type ForceNodeInput = { id: string; node_type: ConceptNodeType; x?: number; y?: number }
 
 export function MethodologyGraph() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
@@ -95,6 +67,8 @@ export function MethodologyGraph() {
     void fetchGraphData()
   }, [])
 
+  const canvasRef = useRef<HTMLDivElement>(null)
+
   const fetchGraphData = async () => {
     setLoading(true)
     try {
@@ -105,9 +79,35 @@ export function MethodologyGraph() {
 
       const allRecords = await conceptNodesCrud.fetchAll()
       const userRecords = allRecords.filter((item) => item.owner_id === user.id)
-      const userNodes = userRecords.map((item, index) => mapConceptNodeToGraphNode(item, index, userRecords.length))
       const edgeRecords = await conceptEdgesCrud.fetchAll()
       const userEdges = edgeRecords.filter((e) => e.owner_id === user.id)
+
+      // Determine canvas dimensions from the container, with fallback
+      const containerWidth = canvasRef.current?.clientWidth ?? 800
+      const containerHeight = canvasRef.current?.clientHeight ?? 600
+
+      // Build force layout input nodes from DB records
+      const forceInput: ForceNodeInput[] = userRecords.map((item) => ({
+        id: item.id,
+        node_type: item.node_type,
+        x: item.position_x || undefined,
+        y: item.position_y || undefined,
+      }))
+
+      // Compute positions using d3-force
+      const positions = computeForceLayout(forceInput, userEdges, containerWidth, containerHeight)
+
+      // Map to GraphNode objects with computed positions
+      const userNodes: GraphNode[] = userRecords.map((item) => ({
+        id: item.id,
+        owner_id: item.owner_id,
+        x: positions.get(item.id)?.x ?? containerWidth / 2,
+        y: positions.get(item.id)?.y ?? containerHeight / 2,
+        label: item.label || "Unnamed Concept Parameter",
+        node_type: item.node_type,
+        viva_feedback: parseVivaFeedback(item.viva_feedback),
+        keywords: (item as any).keywords || [],
+      }))
 
       setNodes(userNodes)
       setConceptEdges(userEdges)
@@ -335,7 +335,7 @@ export function MethodologyGraph() {
               </div>
             </div>
 
-            <div className="relative flex-1 w-full bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px]">
+            <div ref={canvasRef} className="relative flex-1 w-full bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px]">
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground gap-2">
                   <Loader2 className="size-4 animate-spin text-primary" /> Compiling live relational database nodes...
