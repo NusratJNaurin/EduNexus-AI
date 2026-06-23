@@ -63,11 +63,30 @@ export function MethodologyGraph() {
 
   const [conceptEdges, setConceptEdges] = useState<ConceptEdgeRow[]>([])
 
+  // Track actual canvas dimensions via ResizeObserver
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 })
+  const canvasRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    void fetchGraphData()
+    const el = canvasRef.current
+    if (!el) return
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          setCanvasSize({ width: Math.round(width), height: Math.round(height) })
+        }
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
-  const canvasRef = useRef<HTMLDivElement>(null)
+  // Fetch graph data whenever canvas size stabilizes
+  useEffect(() => {
+    void fetchGraphData()
+  }, [canvasSize])
 
   const fetchGraphData = async () => {
     setLoading(true)
@@ -82,9 +101,12 @@ export function MethodologyGraph() {
       const edgeRecords = await conceptEdgesCrud.fetchAll()
       const userEdges = edgeRecords.filter((e) => e.owner_id === user.id)
 
-      // Determine canvas dimensions from the container, with fallback
-      const containerWidth = canvasRef.current?.clientWidth ?? 800
-      const containerHeight = canvasRef.current?.clientHeight ?? 600
+      console.log("[Debug] conceptEdges count:", userEdges.length)
+      console.log("[Debug] conceptEdges:", userEdges.map((e) => ({ id: e.id, source: e.source_node_id, target: e.target_node_id, type: e.relationship_type })))
+
+      // Use ResizeObserver-tracked dimensions
+      const { width: containerWidth, height: containerHeight } = canvasSize
+      console.log("[Debug] canvas dimensions:", containerWidth, containerHeight)
 
       // Build force layout input nodes from DB records
       const forceInput: ForceNodeInput[] = userRecords.map((item) => ({
@@ -94,8 +116,12 @@ export function MethodologyGraph() {
         y: item.position_y || undefined,
       }))
 
+      console.log("[Debug] forceInput nodes:", forceInput.map((n) => ({ id: n.id, type: n.node_type, x: n.x, y: n.y })))
+
       // Compute positions using d3-force
       const positions = computeForceLayout(forceInput, userEdges, containerWidth, containerHeight)
+
+      console.log("[Debug] computed positions:", Array.from(positions.entries()).map(([id, pos]) => ({ id, x: pos.x, y: pos.y })))
 
       // Map to GraphNode objects with computed positions
       const userNodes: GraphNode[] = userRecords.map((item) => ({
@@ -108,6 +134,8 @@ export function MethodologyGraph() {
         viva_feedback: parseVivaFeedback(item.viva_feedback),
         keywords: (item as any).keywords || [],
       }))
+
+      console.log("[Debug] userNodes final positions:", userNodes.map((n) => ({ id: n.id, x: n.x, y: n.y })))
 
       setNodes(userNodes)
       setConceptEdges(userEdges)
