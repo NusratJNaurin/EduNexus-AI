@@ -18,6 +18,14 @@ export const summarizeRequestSchema = z.object({
   fileName: z.string().trim().min(1, "File name is required.").max(255),
 })
 
+export const summarizeResponseSchema = z.object({
+  summary: z.string(),
+  main_concepts: z.array(z.string()),
+  prerequisite_concepts: z.array(z.string()),
+  learning_objectives: z.array(z.string()),
+  is_knowledge_bearing: z.boolean(),
+})
+
 export const analyzeDependenciesNewDocSchema = z.object({
   id: z.string().uuid().or(z.string()),
   title: z.string().trim().min(1).max(500),
