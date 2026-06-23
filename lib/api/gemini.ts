@@ -101,48 +101,59 @@ export async function generateText(prompt: string): Promise<string> {
   return result
 }
 
-export async function generateJson<T>(prompt: string, schema: { parse: (value: unknown) => T }): Promise<T> {
+export async function generateJson<T>(
+  prompt: string,
+  schema: { parse: (value: unknown) => T },
+  responseSchema?: Record<string, unknown>,
+): Promise<T> {
   const result = await withRetry(async () => {
     const ai = createGeminiClient()
+
+    const config: Record<string, unknown> = {
+      responseMimeType: "application/json",
+    }
+
+    if (responseSchema) {
+      config.responseSchema = responseSchema
+    } else {
+      // Default: dependency analysis schema (backward compatibility)
+      config.responseSchema = {
+        type: "OBJECT",
+        properties: {
+          newNodeType: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] },
+          updatedExistingNodes: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                id: { type: "STRING" },
+                node_type: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] }
+              },
+              required: ["id", "node_type"]
+            }
+          },
+          newEdges: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                source_node_id: { type: "STRING" },
+                target_node_id: { type: "STRING" },
+                relationship_type: { type: "STRING", enum: ["prerequisite", "research_gap"] },
+                justification: { type: "STRING" }
+              },
+              required: ["source_node_id", "target_node_id", "relationship_type", "justification"]
+            }
+          }
+        },
+        required: ["newNodeType", "updatedExistingNodes", "newEdges"]
+      }
+    }
 
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        // Forces Gemini 2.5 to perfectly align its keys with whatever Zod layout you provide:
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            newNodeType: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] },
-            updatedExistingNodes: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  id: { type: "STRING" },
-                  node_type: { type: "STRING", enum: ["paper", "prerequisite", "research_gap"] }
-                },
-                required: ["id", "node_type"]
-              }
-            },
-            newEdges: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  source_node_id: { type: "STRING" },
-                  target_node_id: { type: "STRING" },
-                  relationship_type: { type: "STRING", enum: ["prerequisite", "research_gap"] },
-                  justification: { type: "STRING" }
-                },
-                required: ["source_node_id", "target_node_id", "relationship_type", "justification"]
-              }
-            }
-          },
-          required: ["newNodeType", "updatedExistingNodes", "newEdges"]
-        }
-      },
+      config,
     })
 
     const raw = response.text?.trim()
@@ -218,6 +229,27 @@ export async function generateJsonFromAudio(
   }, "generateJsonFromAudio")
 
   return result
+}
+
+/**
+ * Generates an embedding vector for a given text string using Gemini's embedding model.
+ * Embeddings are returned as a number array (in-memory only — not persisted).
+ */
+export async function generateEmbedding(text: string): Promise<number[]> {
+  return withRetry(async () => {
+    const ai = createGeminiClient()
+    const response = await ai.models.embedContent({
+      model: "text-embedding-004",
+      contents: text,
+    })
+    // The SDK returns embedding values in response.embeddings?.[0]?.values
+    const embeddingObj = response.embeddings?.[0]
+    const values = embeddingObj?.values
+    if (!values || !Array.isArray(values)) {
+      throw new Error("Embedding response did not contain expected values array.")
+    }
+    return values as number[]
+  }, "generateEmbedding")
 }
 
 export interface ExistingDocumentContext {
