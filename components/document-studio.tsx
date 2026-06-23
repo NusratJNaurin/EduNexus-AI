@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { conceptNodesCrud, researchDocumentsCrud } from "@/lib/crud"
-import { postAnalyzeDependencies, postChat, postSummarize } from "@/lib/api-client"
+import { postAnalyzeDependencies, postChat, postInferDependencies, postSummarize } from "@/lib/api-client"
 import { usePersistedMessages } from "@/hooks/use-api"
 import type { ChatMessage, ConceptNodeType, DependencyEdge, ResearchDocumentRow } from "@/lib/types"
 import { PdfVisualViewer } from "./PdfVisualViewer"
@@ -279,6 +279,50 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         keywords: baseKeywords,
         summary: "Analyzing contextual concept layout..."
       })
+
+      // 3a. Fetch AI-generated structured metadata via the summarize API
+      let metadataSummary = "Analyzing contextual concept layout..."
+      let mainConcepts: string[] = []
+      let prerequisiteConcepts: string[] = []
+      let learningObjectives: string[] = []
+      let isKnowledgeBearing = false
+
+      try {
+        const safeText = realExtractedText.slice(0, 49000)
+        const summarizeResult = await postSummarize({
+          text: safeText,
+          fileName: newDocRecord.file_name ?? newDocRecord.title ?? "document.pdf",
+        })
+        metadataSummary = summarizeResult.summary
+        mainConcepts = summarizeResult.main_concepts ?? []
+        prerequisiteConcepts = summarizeResult.prerequisite_concepts ?? []
+        learningObjectives = summarizeResult.learning_objectives ?? []
+        isKnowledgeBearing = summarizeResult.is_knowledge_bearing
+      } catch (summarizeErr) {
+        console.error("Structured metadata extraction failed:", summarizeErr)
+      }
+
+      // 3b. Update the concept node with structured metadata from AI
+      await conceptNodesCrud.updateById(targetGraphNode.id, {
+        summary: metadataSummary,
+        main_concepts: mainConcepts,
+        prerequisite_concepts: prerequisiteConcepts,
+        learning_objectives: learningObjectives,
+        is_knowledge_bearing: isKnowledgeBearing,
+      })
+
+      // 3c. If the document is knowledge-bearing, infer dependency edges automatically
+      if (isKnowledgeBearing && prerequisiteConcepts.length > 0) {
+        try {
+          const inferenceResult = await postInferDependencies({
+            newNodeId: targetGraphNode.id,
+            prerequisiteConcepts,
+          })
+          console.log(`[Dependency Inference] Created ${inferenceResult.edges.length} prerequisite edge(s)`)
+        } catch (inferErr) {
+          console.error("Dependency inference failed:", inferErr)
+        }
+      }
 
       // 4. Query all existing context nodes currently stored in your system
       const existingSystemNodes = await conceptNodesCrud.fetchAll()
