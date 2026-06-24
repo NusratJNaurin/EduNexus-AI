@@ -150,15 +150,38 @@ export default function Page() {
           />
           <main className="min-w-0 flex-1 overflow-x-hidden">
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {view === "access" && (
-                <AccessGate
-                  onAuthed={(role: UserRole) => {
-                    setAuthed(true)
-                    setProfileRole(role)
-                    setView(role === "faculty" ? "portal" : "studio")
-                  }}
-                />
-              )}
+          {view === "access" && (
+            <AccessGate
+              onAuthed={async (role: UserRole) => {
+                setAuthed(true)
+                setProfileRole(role)
+
+                // Immediately fetch the user's profile to set profileId / profileName
+                // so that downstream components like TeacherPortal have them available
+                // right away, rather than waiting for the async auth subscription.
+                try {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (user?.id) {
+                    const { data: profile } = await supabase
+                      .from("profiles")
+                      .select("*")
+                      .eq("id", user.id)
+                      .maybeSingle()
+
+                    if (profile) {
+                      const parsed = profile as ProfileRow
+                      setProfileId(parsed.id)
+                      setProfileName(parsed.full_name)
+                    }
+                  }
+                } catch {
+                  // Non-critical; profile will be fetched by onAuthStateChange eventually
+                }
+
+                setView(role === "faculty" ? "portal" : "studio")
+              }}
+            />
+          )}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
               {view === "portal" && isFaculty && (
