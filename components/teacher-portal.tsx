@@ -382,7 +382,7 @@ export function TeacherPortal({
       return
     }
 
-    const inviteCode = inviteCodeDraft || buildInviteCode(courseCode, sectionNumber)
+    const inviteCode = buildInviteCode(courseCode, sectionNumber)
 
     try {
       setLoading(true)
