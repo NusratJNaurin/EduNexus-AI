@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react"
 import { classSectionsCrud, profilesCrud, researchDocumentsCrud, sectionEnrollmentsCrud } from "@/lib/crud"
+import { supabase } from "@/lib/supabase"
 import type {
   ClassSectionRow,
   ProfileRow,
@@ -387,8 +388,15 @@ export function TeacherPortal({
       setLoading(true)
       setError("")
 
+      const { data: { user } } = await supabase.auth.getUser()
+      const instructorId = user?.id
+
+      if (!instructorId) {
+        throw new Error("No authenticated user found. Please log in again.")
+      }
+
       const createdSection = await classSectionsCrud.insertRecord({
-        instructor_id: profileId,
+        instructor_id: instructorId,
         course_code: courseCode,
         section_number: sectionNumber,
         invite_code: inviteCode,
@@ -400,7 +408,15 @@ export function TeacherPortal({
       setNewCourseCode("")
       setNewSectionNumber("")
     } catch (createError) {
-      const message = createError instanceof Error ? createError.message : "Could not create the section."
+      const error = createError as Error & { details?: string; hint?: string; code?: string }
+      console.error("FULL DATABASE ERROR:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        raw: createError,
+      })
+      const message = error.message || "Could not create the section."
       setError(message)
     } finally {
       setLoading(false)
