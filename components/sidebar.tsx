@@ -48,10 +48,15 @@ export function Sidebar({
   name?: string | null
   role?: string | null
 }) {
-  // Filters out access elements and strictly distributes view paths based on authorization credentials.
-  // Faculty can see all workspace modules; students see only studio & graph (portal is hidden).
+  // Role-based navigation filtering:
+  // Faculty   → studio, graph, portal (NOT sections)
+  // Students  → sections, studio, graph (NOT portal)
+  // Researchers → sections, studio, graph (NOT portal)
   const visibleNav = authed
-    ? NAV.filter((item) => (canAccessPortal ? true : item.key !== "portal"))
+    ? NAV.filter((item) => {
+        if (canAccessPortal) return item.key !== "sections"
+        return item.key !== "portal"
+      })
     : []
 
   // Helper logic to cleanly extract double initials from names dynamically
