@@ -6,6 +6,7 @@ import {
   FileText,
   Workflow,
   ClipboardList,
+  LayoutDashboard,
   Lock,
   LogIn,
   CheckCircle2,
@@ -17,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { sectionEnrollmentsCrud } from "@/lib/crud"
 
-export type ViewKey = "access" | "studio" | "graph" | "portal"
+export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
 
 const NAV: {
   key: ViewKey
@@ -26,6 +27,7 @@ const NAV: {
   icon: typeof FileText
   requiresAuth: boolean
 }[] = [
+  { key: "sections", label: "My Sections", sub: "Enrolled classes", icon: LayoutDashboard, requiresAuth: true },
   { key: "studio", label: "Document Interaction Studio", sub: "Read & analyze", icon: FileText, requiresAuth: true },
   { key: "graph", label: "Methodology Graph Workspace", sub: "Knowledge map", icon: Workflow, requiresAuth: true },
   { key: "portal", label: "Teacher Evaluation Portal", sub: "Analytics", icon: ClipboardList, requiresAuth: true },
