@@ -6,6 +6,7 @@ import { Sidebar, type ViewKey } from "@/components/sidebar"
 import { AccessGate } from "../components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
+import { StudentWorkspace } from "@/components/student-workspace"
 import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
 import { supabase } from "@/lib/supabase"
@@ -62,7 +63,7 @@ export default function Page() {
 
         setView((currentView) => {
           if (currentView === "access") {
-            return nextRole === "faculty" ? "portal" : "studio"
+            return nextRole === "faculty" ? "portal" : "sections"
           }
           return currentView
         })
@@ -178,10 +179,11 @@ export default function Page() {
                   // Non-critical; profile will be fetched by onAuthStateChange eventually
                 }
 
-                setView(role === "faculty" ? "portal" : "studio")
+                setView(role === "faculty" ? "portal" : "sections")
               }}
             />
           )}
+              {view === "sections" && <StudentWorkspace />}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
               {view === "portal" && isFaculty && (
