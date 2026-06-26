@@ -63,7 +63,9 @@ export default function Page() {
 
         setView((currentView) => {
           if (currentView === "access") {
-            return nextRole === "faculty" ? "portal" : "sections"
+            if (nextRole === "faculty") return "portal"
+            if (nextRole === "student") return "sections"
+            return "studio"
           }
           return currentView
         })
@@ -179,7 +181,7 @@ export default function Page() {
                   // Non-critical; profile will be fetched by onAuthStateChange eventually
                 }
 
-                setView(role === "faculty" ? "portal" : "sections")
+                setView(role === "faculty" ? "portal" : role === "student" ? "sections" : "studio")
               }}
             />
           )}

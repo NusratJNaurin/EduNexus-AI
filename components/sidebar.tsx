@@ -49,12 +49,15 @@ export function Sidebar({
   role?: string | null
 }) {
   // Role-based navigation filtering:
-  // Faculty   → studio, graph, portal (NOT sections)
-  // Students  → sections, studio, graph (NOT portal)
-  // Researchers → sections, studio, graph (NOT portal)
+  // Students    → sections, studio, graph (NOT portal)
+  // Faculty     → studio, graph, portal (NOT sections)
+  // Researchers → studio, graph (NOT sections, NOT portal)
+  const userRole = role?.trim().toLowerCase() ?? ""
+  const isResearcher = userRole === "researcher"
   const visibleNav = authed
     ? NAV.filter((item) => {
         if (canAccessPortal) return item.key !== "sections"
+        if (isResearcher) return item.key !== "sections" && item.key !== "portal"
         return item.key !== "portal"
       })
     : []
