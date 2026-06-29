@@ -184,6 +184,17 @@ export function serializeVivaFeedback(items: VivaFeedbackItem[]): string {
   return JSON.stringify(items)
 }
 
+export interface RoleRequestRow {
+  id: string
+  user_id: string
+  requested_role: string
+  status: "pending" | "approved" | "rejected"
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export function normalizeRole(role: string | null | undefined): UserRole | "" {
   const value = role?.trim().toLowerCase() ?? ""
   if (value === "student" || value === "faculty" || value === "researcher") {
