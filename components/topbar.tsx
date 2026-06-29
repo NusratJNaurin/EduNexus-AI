@@ -6,10 +6,12 @@ import { Bell, LogOut, Search } from "lucide-react"
 
 const TITLES: Record<ViewKey, { title: string; crumb: string }> = {
   access: { title: "Universal Access Gate", crumb: "Authentication" },
+  onboarding: { title: "Complete Workspace Setup", crumb: "Authentication / Onboarding" },
   sections: { title: "My Sections", crumb: "Workspace / My Sections" },
   studio: { title: "Document Interaction Studio", crumb: "Workspace / Studio" },
   graph: { title: "Methodology Graph Workspace", crumb: "Workspace / Graph" },
   portal: { title: "Teacher Evaluation Portal", crumb: "Workspace / Portal" },
+  "faculty-pending": { title: "Faculty Access Pending", crumb: "Workspace / Pending Approval" },
 }
 
 export function Topbar({
