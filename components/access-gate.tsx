@@ -2,16 +2,28 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
+import { ChevronDown, GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 type AuthRole = "student" | "faculty" | "researcher"
+
+const ROLE_OPTIONS = ["Student", "Faculty", "Researcher"] as const
+const MAJOR_OPTIONS = [
+  "Computer Engineering",
+  "Electrical Engineering",
+  "Medicine",
+  "Pharmacy",
+  "Civil & Architectural Eng.",
+  "Data Science",
+]
 
 export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void }) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]>("Student")
+  const [major, setMajor] = useState(MAJOR_OPTIONS[0])
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
@@ -28,6 +40,8 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
     }
 
     let dbRole: AuthRole = "student"
+    if (role === "Faculty") dbRole = "faculty"
+    if (role === "Researcher") dbRole = "researcher"
 
     try {
       if (isSignUp) {
@@ -38,6 +52,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             data: {
               full_name: fullName || "New Academic User",
               role: dbRole,
+              academic_domain: major,
             },
           },
         })
@@ -155,6 +170,21 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             </Field>
           )}
 
+          {isSignUp && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Role">
+                <SelectBox
+                  value={role}
+                  onChange={(value) => setRole(value as (typeof ROLE_OPTIONS)[number])}
+                  options={[...ROLE_OPTIONS]}
+                />
+              </Field>
+              <Field label="Major">
+                <SelectBox value={major} onChange={setMajor} options={MAJOR_OPTIONS} />
+              </Field>
+            </div>
+          )}
+
           <Field label="QU Academic Email">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
               <Mail className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -217,6 +247,36 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-sm font-medium text-card-foreground">{label}</span>
       {children}
     </label>
+  )
+}
+
+function SelectBox({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: string[]
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full appearance-none rounded-lg border border-input bg-background py-2.5 pl-3 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+    </div>
   )
 }
 
