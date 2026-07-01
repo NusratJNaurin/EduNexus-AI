@@ -622,8 +622,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 items-start">
-      <section className="flex flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8">
+    <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden p-4 lg:p-5">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-12">
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card lg:col-span-8">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -724,9 +725,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </div>
         </div>
 
-        <div className="p-3 bg-background">
+        <div className="flex min-h-0 flex-1 flex-col bg-background p-3">
           {activeDoc ? (
-            <div className="flex flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs min-h-[600px]">
+            <div className="flex h-full min-h-0 flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Visual Render Sandbox · Canvas Document Framework
@@ -734,12 +735,12 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
                 <h3 className="mb-2 text-sm font-semibold text-foreground">{activeDoc.title}</h3>
               </div>
 
-              <div className="flex-1 border-t border-border/40 pt-2">
+              <div className="flex-1 min-h-0 overflow-hidden border-t border-border/40 pt-2">
                 <PdfVisualViewer fileUrl={activeDoc.file_url} />
               </div>
             </div>
           ) : (
-            <div className="flex h-[600px] flex-col items-center justify-center p-8 text-center text-muted-foreground">
+            <div className="flex h-full min-h-[20rem] flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
               <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
               <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
@@ -748,7 +749,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 lg:col-span-4">
+      <section className="flex min-h-0 flex-col gap-4 lg:col-span-4">
         <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-2">
@@ -785,7 +786,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </div>
         )}
 
-        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-[460px]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-1.5">
               <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
@@ -806,7 +807,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
             )}
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-3 max-h-[400px]">
+          <div className="flex-1 space-y-4 overflow-y-auto p-3">
             {activeDoc ? (
               messages.map((message) => (
                 <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
@@ -904,6 +905,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </form>
         </div>
       </section>
+      </div>
     </div>
   )
 }

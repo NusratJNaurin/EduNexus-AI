@@ -425,7 +425,7 @@ export function TeacherPortal({
 
   if (!isFaculty) {
     return (
-      <div className="space-y-4 p-4 lg:p-5">
+      <div className="h-full min-h-0 space-y-4 overflow-y-auto p-4 lg:p-5">
         <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 text-foreground">
             <ShieldAlert className="size-4 text-destructive" aria-hidden="true" />
@@ -438,7 +438,7 @@ export function TeacherPortal({
   }
 
   return (
-    <div className="space-y-4 p-4 lg:p-5">
+    <div className="h-full min-h-0 space-y-4 overflow-y-auto p-4 lg:p-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Active students" value={String(metrics.activeStudents)} icon={Users} />
         <StatCard label="Avg. reading time" value={formatDuration(metrics.avgReadingTime)} icon={Clock} />

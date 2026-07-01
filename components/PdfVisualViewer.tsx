@@ -95,11 +95,11 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
   }
 
   return (
-    <div className="w-full rounded-xl border border-border bg-muted/10 p-2">
+    <div className="flex h-full min-h-0 w-full flex-col rounded-xl border border-border bg-muted/10 p-2">
       {/* Native Browser PDF Core Sandbox */}
       <iframe
         src={`${resolvedUrl}#toolbar=1&navpanes=0`}
-        className="h-[600px] w-full rounded-lg bg-background shadow-xs"
+        className="h-full min-h-[28rem] w-full rounded-lg bg-background shadow-xs"
         title="PDF Document Viewer"
         onError={() => console.error("[PdfVisualViewer] iframe failed to load PDF at:", resolvedUrl.slice(0, 80))}
       />

@@ -199,7 +199,7 @@ export function StudentWorkspace() {
   }, [userId, enrollments, sections, profiles, documents])
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="h-full min-h-0 space-y-6 overflow-y-auto p-4 lg:p-6">
       {/* Page header — QU-themed */}
       <div className="border-b border-border pb-4">
         <div className="flex items-center gap-3">
