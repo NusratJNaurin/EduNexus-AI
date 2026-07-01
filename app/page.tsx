@@ -9,6 +9,7 @@ import { MethodologyGraph } from "@/components/methodology-graph"
 import { StudentWorkspace } from "@/components/student-workspace"
 import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
+import { UserSessionProvider } from "@/components/user-session-context"
 import { supabase } from "@/lib/supabase"
 import type { ProfileRow, UserRole } from "@/lib/types"
 import { normalizeRole } from "@/lib/types"
@@ -19,6 +20,7 @@ export default function Page() {
   const [authed, setAuthed] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<string | null>(null)
+  const [profileMajor, setProfileMajor] = useState<string | null>(null)
   const [profileRole, setProfileRole] = useState<UserRole | null>(null)
 
   const authUserIdRef = useRef<string | null>(null)
@@ -28,6 +30,7 @@ export default function Page() {
     setAuthed(false)
     setProfileId(null)
     setProfileName(null)
+    setProfileMajor(null)
     setProfileRole(null)
     setView("access")
   }
@@ -58,6 +61,7 @@ export default function Page() {
 
         setProfileId(parsedProfile.id)
         setProfileName(parsedProfile.full_name)
+        setProfileMajor(parsedProfile.academic_domain)
         setProfileRole(nextRole || "student")
         setAuthed(true)
 
@@ -128,78 +132,91 @@ export default function Page() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <div className="flex min-h-0 flex-1">
-        {authed && (
-          <Sidebar
-            active={view}
-            onNavigate={handleNavigate}
-            authed={authed}
-            canAccessPortal={isFaculty}
-            name={profileName}
-            role={profileRole}
-          />
-        )}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar
-            view={view}
-            authed={authed}
-            name={profileName || "Guest"}
-            onSignOut={async () => {
-              await supabase.auth.signOut()
-              resetWorkspaceState()
-              router.refresh()
-            }}
-          />
-          <main className="min-w-0 flex-1 overflow-x-hidden">
-            <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {view === "access" && (
-            <AccessGate
-              onAuthed={async (role: UserRole) => {
-                setAuthed(true)
-                setProfileRole(role)
-
-                // Immediately fetch the user's profile to set profileId / profileName
-                // so that downstream components like TeacherPortal have them available
-                // right away, rather than waiting for the async auth subscription.
-                try {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (user?.id) {
-                    const { data: profile } = await supabase
-                      .from("profiles")
-                      .select("*")
-                      .eq("id", user.id)
-                      .maybeSingle()
-
-                    if (profile) {
-                      const parsed = profile as ProfileRow
-                      setProfileId(parsed.id)
-                      setProfileName(parsed.full_name)
-                    }
-                  }
-                } catch {
-                  // Non-critical; profile will be fetched by onAuthStateChange eventually
-                }
-
-                setView(role === "faculty" ? "portal" : role === "student" ? "sections" : "studio")
-              }}
+    <UserSessionProvider
+      value={{
+        authed,
+        profileId,
+        profileName,
+        profileMajor,
+        profileRole,
+        setAuthed,
+        setProfileId,
+        setProfileName,
+        setProfileMajor,
+        setProfileRole,
+      }}
+    >
+      <div className="flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {authed && (
+            <Sidebar
+              active={view}
+              onNavigate={handleNavigate}
+              authed={authed}
+              canAccessPortal={isFaculty}
             />
           )}
-              {view === "sections" && <StudentWorkspace />}
-              {view === "studio" && <DocumentStudio />}
-              {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && isFaculty && (
-                <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
-              )}
-              {view === "portal" && !isFaculty && (
-                <div className="p-8 text-center text-destructive font-medium">
-                  Access Denied: You do not have permission to view the evaluation workspace dashboard.
-                </div>
-              )}
-            </div>
-          </main>
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Topbar
+              view={view}
+              authed={authed}
+              name={profileName || "Guest"}
+              onSignOut={async () => {
+                await supabase.auth.signOut()
+                resetWorkspaceState()
+                router.refresh()
+              }}
+            />
+            <main className="min-w-0 flex-1 overflow-hidden">
+              <div key={view} className="h-full min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden">
+                {view === "access" && (
+                  <AccessGate
+                    onAuthed={async (role: UserRole) => {
+                      setAuthed(true)
+                      setProfileRole(role)
+
+                      try {
+                        const {
+                          data: { user },
+                        } = await supabase.auth.getUser()
+                        if (user?.id) {
+                          const { data: profile } = await supabase
+                            .from("profiles")
+                            .select("*")
+                            .eq("id", user.id)
+                            .maybeSingle()
+
+                          if (profile) {
+                            const parsed = profile as ProfileRow
+                            setProfileId(parsed.id)
+                            setProfileName(parsed.full_name)
+                            setProfileMajor(parsed.academic_domain)
+                          }
+                        }
+                      } catch {
+                        // Non-critical; profile will be fetched by onAuthStateChange eventually
+                      }
+
+                      setView(role === "faculty" ? "portal" : role === "student" ? "sections" : "studio")
+                    }}
+                  />
+                )}
+                {view === "sections" && <StudentWorkspace />}
+                {view === "studio" && <DocumentStudio />}
+                {view === "graph" && <MethodologyGraph />}
+                {view === "portal" && isFaculty && (
+                  <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
+                )}
+                {view === "portal" && !isFaculty && (
+                  <div className="p-8 text-center font-medium text-destructive">
+                    Access Denied: You do not have permission to view the evaluation workspace dashboard.
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+    </UserSessionProvider>
   )
 }

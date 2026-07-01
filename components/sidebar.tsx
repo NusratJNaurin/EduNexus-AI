@@ -16,7 +16,9 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
-import { sectionEnrollmentsCrud } from "@/lib/crud"
+import { profilesCrud, sectionEnrollmentsCrud } from "@/lib/crud"
+import { Button } from "@/components/ui/button"
+import { useUserSession } from "@/components/user-session-context"
 
 export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
 
@@ -38,21 +40,26 @@ export function Sidebar({
   onNavigate,
   authed,
   canAccessPortal,
-  name,
-  role,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   authed: boolean
   canAccessPortal: boolean
-  name?: string | null
-  role?: string | null
 }) {
+  const {
+    profileId,
+    profileName,
+    profileMajor,
+    profileRole,
+    setProfileName,
+    setProfileMajor,
+  } = useUserSession()
+
   // Role-based navigation filtering:
   // Students    → sections, studio, graph (NOT portal)
   // Faculty     → studio, graph, portal (NOT sections)
   // Researchers → studio, graph (NOT sections, NOT portal)
-  const userRole = role?.trim().toLowerCase() ?? ""
+  const userRole = profileRole?.trim().toLowerCase() ?? ""
   const isResearcher = userRole === "researcher"
   const visibleNav = authed
     ? NAV.filter((item) => {
@@ -86,7 +93,74 @@ export function Sidebar({
     return () => clearTimeout(timer)
   }, [toast])
 
-  const isStudent = authed && role === "student"
+  const isStudent = authed && profileRole === "student"
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState("")
+  const [profileSuccess, setProfileSuccess] = useState("")
+  const [profileDraftName, setProfileDraftName] = useState(profileName ?? "")
+  const [profileDraftMajor, setProfileDraftMajor] = useState(profileMajor ?? "")
+  const [profileDraftPassword, setProfileDraftPassword] = useState("")
+
+  useEffect(() => {
+    if (!profileEditorOpen) return
+    setProfileDraftName(profileName ?? "")
+    setProfileDraftMajor(profileMajor ?? "")
+    setProfileDraftPassword("")
+    setProfileError("")
+    setProfileSuccess("")
+  }, [profileEditorOpen, profileMajor, profileName])
+
+  const handleSaveProfile = useCallback(async () => {
+    const nextName = profileDraftName.trim()
+    const nextMajor = profileDraftMajor.trim()
+
+    if (!profileId) {
+      setProfileError("No authenticated profile was found.")
+      return
+    }
+
+    if (!nextName) {
+      setProfileError("Name is required.")
+      return
+    }
+
+    if (!nextMajor) {
+      setProfileError("Major is required.")
+      return
+    }
+
+    setProfileSaving(true)
+    setProfileError("")
+    setProfileSuccess("")
+
+    try {
+      await profilesCrud.updateById(profileId, {
+        full_name: nextName,
+        academic_domain: nextMajor,
+      })
+
+      if (profileDraftPassword.trim()) {
+        const { error } = await supabase.auth.updateUser({ password: profileDraftPassword.trim() })
+        if (error) throw error
+      }
+
+      setProfileName(nextName)
+      setProfileMajor(nextMajor)
+      setProfileSuccess("Profile updated successfully.")
+      setProfileDraftPassword("")
+
+      window.setTimeout(() => {
+        setProfileEditorOpen(false)
+        setProfileSuccess("")
+      }, 700)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update profile."
+      setProfileError(message)
+    } finally {
+      setProfileSaving(false)
+    }
+  }, [profileDraftMajor, profileDraftName, profileDraftPassword, profileId, setProfileMajor, setProfileName])
 
   const handleJoinClass = useCallback(async () => {
     const code = inviteCode.trim()
@@ -269,20 +343,86 @@ export function Sidebar({
 
       {/* Dynamic Profile Identifier Interface */}
       <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => setProfileEditorOpen(true)}
+          className="flex w-full items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent/80"
+        >
           <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
-            {authed ? getInitials(name) : "—"}
+            {authed ? getInitials(profileName) : "—"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              {authed ? (name || "Academic User") : "Guest"}
-            </p>
+            <p className="truncate text-sm font-medium">{authed ? (profileName || "Profile") : "Guest"}</p>
             <p className="truncate text-xs text-sidebar-foreground/50 capitalize">
-              {authed ? (role || "Student") : "Not signed in"}
+              {authed ? (profileMajor || profileRole || "Academic profile") : "Not signed in"}
             </p>
           </div>
-        </div>
+        </button>
       </div>
+
+      {profileEditorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Profile settings</p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight text-card-foreground">Edit your profile</h2>
+                <p className="mt-1 text-sm text-muted-foreground">You can change your name, password, and major only.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProfileEditorOpen(false)}
+                className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-card-foreground">Name</span>
+                <input
+                  value={profileDraftName}
+                  onChange={(event) => setProfileDraftName(event.target.value)}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-card-foreground">Password</span>
+                <input
+                  type="password"
+                  value={profileDraftPassword}
+                  onChange={(event) => setProfileDraftPassword(event.target.value)}
+                  placeholder="Leave blank to keep your current password"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-card-foreground">Major</span>
+                <input
+                  value={profileDraftMajor}
+                  onChange={(event) => setProfileDraftMajor(event.target.value)}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+
+              {profileError && <p className="text-sm text-destructive">{profileError}</p>}
+              {profileSuccess && <p className="text-sm text-emerald-600">{profileSuccess}</p>}
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setProfileEditorOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSaveProfile} disabled={profileSaving}>
+                {profileSaving ? "Saving..." : "Save changes"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

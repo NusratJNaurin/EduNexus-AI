@@ -2,18 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
+import { GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-
-const ROLES = ["Student", "Faculty", "Researcher"] as const
-const DOMAINS = [
-  "Computer Engineering",
-  "Electrical Engineering",
-  "Medicine",
-  "Pharmacy",
-  "Civil & Architectural Eng.",
-  "Data Science",
-]
 
 type AuthRole = "student" | "faculty" | "researcher"
 
@@ -22,8 +12,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<(typeof ROLES)[number]>("Student")
-  const [domain, setDomain] = useState(DOMAINS[0])
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
@@ -40,8 +28,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
     }
 
     let dbRole: AuthRole = "student"
-    if (role === "Faculty") dbRole = "faculty"
-    if (role === "Researcher") dbRole = "researcher"
 
     try {
       if (isSignUp) {
@@ -52,7 +38,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             data: {
               full_name: fullName || "New Academic User",
               role: dbRole,
-              academic_domain: domain,
             },
           },
         })
@@ -74,7 +59,16 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
       if (error) throw error
       if (!data?.user) throw new Error("Authentication failed.")
 
-      onAuthed(dbRole)
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .maybeSingle()
+
+      if (profileError) throw profileError
+
+      const nextRole = profile?.role === "faculty" || profile?.role === "researcher" ? profile.role : "student"
+      onAuthed(nextRole)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during authentication."
       console.error(err)
@@ -189,15 +183,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             </div>
           </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Role">
-              <SelectBox value={role} onChange={(value) => setRole(value as (typeof ROLES)[number])} options={[...ROLES]} />
-            </Field>
-            <Field label="Domain">
-              <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
-            </Field>
-          </div>
-
           <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? "Verifying Credentials..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
           </Button>
@@ -235,32 +220,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function SelectBox({
-  value,
-  onChange,
-  options,
-}: {
-  value: string
-  onChange: (v: string) => void
-  options: string[]
-}) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none rounded-lg border border-input bg-background py-2.5 pl-3 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-        aria-hidden="true"
-      />
-    </div>
-  )
-}
