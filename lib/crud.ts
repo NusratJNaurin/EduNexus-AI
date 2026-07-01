@@ -6,7 +6,6 @@ import type {
   ResearchDocumentRow,
   SectionEnrollmentRow,
   ConceptEdgeRow,
-  RoleRequestRow,
 } from "./types"
 
 type CrudRecord = object
@@ -64,7 +63,6 @@ export const conceptNodesCrud = createCrudHelpers<ConceptNodeRow>("concept_nodes
 export const classSectionsCrud = createCrudHelpers<ClassSectionRow>("class_sections")
 export const sectionEnrollmentsCrud = createCrudHelpers<SectionEnrollmentRow>("section_enrollments")
 export const conceptEdgesCrud = createCrudHelpers<ConceptEdgeRow>("concept_edges") // Grouped cleanly together!
-export const roleRequestsCrud = createCrudHelpers<RoleRequestRow>("role_requests")
 
 export async function uploadFileToStorage(
   bucketName: string,

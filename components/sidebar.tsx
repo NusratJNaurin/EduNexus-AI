@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { sectionEnrollmentsCrud } from "@/lib/crud"
 
-export type ViewKey = "access" | "onboarding" | "studio" | "graph" | "portal" | "sections" | "faculty-pending"
+export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
 
 const NAV: {
   key: ViewKey

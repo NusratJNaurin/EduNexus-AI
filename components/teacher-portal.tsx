@@ -128,12 +128,10 @@ export function TeacherPortal({
   profileId,
   profileRole,
   profileName,
-  isVerified,
 }: {
   profileId: string | null
   profileRole: string | null
   profileName: string | null
-  isVerified?: boolean
 }) {
   const [sections, setSections] = useState<ClassSectionRow[]>([])
   const [activeSectionId, setActiveSectionId] = useState("")
@@ -434,38 +432,6 @@ export function TeacherPortal({
             <p className="font-semibold">Faculty-only evaluation workspace</p>
           </div>
           <p className="mt-2">This portal is hidden from student and researcher accounts.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Faculty verification gate ──────────────────────────────────────────
-  if (isFaculty && isVerified === false) {
-    return (
-      <div className="space-y-4 p-4 lg:p-5">
-        <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-border bg-card p-7 shadow-sm text-center">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-accent/20">
-            <svg className="size-8 text-accent-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold tracking-tight text-card-foreground">
-              Faculty Access Pending Approval
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Your faculty access request has been submitted. An administrator is reviewing your credentials.
-              You will be granted Teacher Evaluation Portal access shortly.
-            </p>
-          </div>
-          <div className="rounded-lg border border-accent/20 bg-accent/5 p-4 text-left text-sm">
-            <p className="font-medium text-card-foreground">In the meantime, you can:</p>
-            <ul className="mt-1.5 list-disc pl-4 text-xs text-muted-foreground space-y-1">
-              <li>Upload and analyze research documents in the Document Studio</li>
-              <li>Explore the Methodology Graph Workspace</li>
-              <li>Map knowledge dependencies between academic papers</li>
-            </ul>
-          </div>
         </div>
       </div>
     )
