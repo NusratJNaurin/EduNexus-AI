@@ -5,7 +5,6 @@ import {
   GraduationCap,
   FileText,
   Workflow,
-  ClipboardList,
   LayoutDashboard,
   LogIn,
   CheckCircle2,
@@ -28,7 +27,6 @@ const NAV: {
   { key: "sections", label: "My Sections", sub: "Enrolled classes", icon: LayoutDashboard },
   { key: "studio", label: "Document Interaction Studio", sub: "Read & analyze", icon: FileText },
   { key: "graph", label: "Methodology Graph Workspace", sub: "Knowledge map", icon: Workflow },
-  { key: "portal", label: "Teacher Evaluation Portal", sub: "Analytics", icon: ClipboardList },
 ]
 
 export function Sidebar({

@@ -7,7 +7,6 @@ import { AccessGate } from "../components/access-gate"
 import { DocumentStudio } from "@/components/document-studio"
 import { MethodologyGraph } from "@/components/methodology-graph"
 import { StudentWorkspace } from "@/components/student-workspace"
-import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
 import { supabase } from "@/lib/supabase"
 import type { ProfileRow } from "@/lib/types"
@@ -130,7 +129,7 @@ export default function Page() {
           <Topbar
             view={view}
             authed={authed}
-            name={profileName || "Guest"}
+            name={profileName}
             onSignOut={async () => {
               await supabase.auth.signOut()
               resetWorkspaceState()
@@ -142,8 +141,8 @@ export default function Page() {
           {view === "access" && (
             <AccessGate
               onAuthed={async () => {
-                setAuthed(true)
-
+                // Fetch the user's profile FIRST, then set authed=true
+                // so the UI never renders with authed=true but no profile data.
                 try {
                   const { data: { user } } = await supabase.auth.getUser()
                   if (user?.id) {
@@ -164,6 +163,7 @@ export default function Page() {
                   // Non-critical; profile will be fetched by onAuthStateChange eventually
                 }
 
+                setAuthed(true)
                 setView("studio")
               }}
             />
@@ -171,9 +171,6 @@ export default function Page() {
               {view === "sections" && <StudentWorkspace />}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && (
-                <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
-              )}
             </div>
           </main>
         </div>
