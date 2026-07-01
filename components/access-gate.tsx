@@ -17,7 +17,7 @@ const DOMAINS = [
 
 type AuthRole = "student" | "faculty" | "researcher"
 
-export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
+export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void }) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -74,7 +74,7 @@ export function AccessGate({ onAuthed }: { onAuthed: () => void }) {
       if (error) throw error
       if (!data?.user) throw new Error("Authentication failed.")
 
-      onAuthed()
+      onAuthed(dbRole)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during authentication."
       console.error(err)
