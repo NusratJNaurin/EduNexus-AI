@@ -7,7 +7,6 @@ import {
   Workflow,
   ClipboardList,
   LayoutDashboard,
-  Lock,
   LogIn,
   CheckCircle2,
   AlertCircle,
@@ -25,43 +24,26 @@ const NAV: {
   label: string
   sub: string
   icon: typeof FileText
-  requiresAuth: boolean
 }[] = [
-  { key: "sections", label: "My Sections", sub: "Enrolled classes", icon: LayoutDashboard, requiresAuth: true },
-  { key: "studio", label: "Document Interaction Studio", sub: "Read & analyze", icon: FileText, requiresAuth: true },
-  { key: "graph", label: "Methodology Graph Workspace", sub: "Knowledge map", icon: Workflow, requiresAuth: true },
-  { key: "portal", label: "Teacher Evaluation Portal", sub: "Analytics", icon: ClipboardList, requiresAuth: true },
+  { key: "sections", label: "My Sections", sub: "Enrolled classes", icon: LayoutDashboard },
+  { key: "studio", label: "Document Interaction Studio", sub: "Read & analyze", icon: FileText },
+  { key: "graph", label: "Methodology Graph Workspace", sub: "Knowledge map", icon: Workflow },
+  { key: "portal", label: "Teacher Evaluation Portal", sub: "Analytics", icon: ClipboardList },
 ]
 
 export function Sidebar({
   active,
   onNavigate,
   authed,
-  canAccessPortal,
   name,
   role,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   authed: boolean
-  canAccessPortal: boolean
   name?: string | null
   role?: string | null
 }) {
-  // Role-based navigation filtering:
-  // Students    → sections, studio, graph (NOT portal)
-  // Faculty     → studio, graph, portal (NOT sections)
-  // Researchers → studio, graph (NOT sections, NOT portal)
-  const userRole = role?.trim().toLowerCase() ?? ""
-  const isResearcher = userRole === "researcher"
-  const visibleNav = authed
-    ? NAV.filter((item) => {
-        if (canAccessPortal) return item.key !== "sections"
-        if (isResearcher) return item.key !== "sections" && item.key !== "portal"
-        return item.key !== "portal"
-      })
-    : []
-
   // Helper logic to cleanly extract double initials from names dynamically
   const getInitials = (fullName: string | null | undefined) => {
     if (!fullName) return "U"
@@ -172,23 +154,20 @@ export function Sidebar({
         <p className="px-3 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
           Workspace
         </p>
-        {visibleNav.map((item) => {
+        {NAV.map((item) => {
           const Icon = item.icon
-          const locked = item.requiresAuth && !authed
           const isActive = active === item.key
           return (
             <button
               key={item.key}
               type="button"
-              onClick={() => !locked && onNavigate(item.key)}
-              disabled={locked}
+              onClick={() => onNavigate(item.key)}
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                locked && "cursor-not-allowed opacity-40 hover:bg-transparent",
               )}
             >
               <Icon className="size-5 shrink-0" aria-hidden="true" />
@@ -203,7 +182,6 @@ export function Sidebar({
                   {item.sub}
                 </span>
               </span>
-              {locked && <Lock className="size-3.5 shrink-0" aria-hidden="true" />}
             </button>
           )
         })}

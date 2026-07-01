@@ -10,8 +10,7 @@ import { StudentWorkspace } from "@/components/student-workspace"
 import { TeacherPortal } from "../components/teacher-portal"
 import { Topbar } from "@/components/topbar"
 import { supabase } from "@/lib/supabase"
-import type { ProfileRow, UserRole } from "@/lib/types"
-import { normalizeRole } from "@/lib/types"
+import type { ProfileRow } from "@/lib/types"
 
 export default function Page() {
   const router = useRouter()
@@ -19,10 +18,9 @@ export default function Page() {
   const [authed, setAuthed] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<string | null>(null)
-  const [profileRole, setProfileRole] = useState<UserRole | null>(null)
+  const [profileRole, setProfileRole] = useState<string | null>(null)
 
   const authUserIdRef = useRef<string | null>(null)
-  const isFaculty = normalizeRole(profileRole) === "faculty"
 
   const resetWorkspaceState = () => {
     setAuthed(false)
@@ -54,19 +52,14 @@ export default function Page() {
         }
 
         const parsedProfile = profile as ProfileRow
-        const nextRole = normalizeRole(parsedProfile.role)
 
         setProfileId(parsedProfile.id)
         setProfileName(parsedProfile.full_name)
-        setProfileRole(nextRole || "student")
+        setProfileRole(parsedProfile.role)
         setAuthed(true)
 
         setView((currentView) => {
-          if (currentView === "access") {
-            if (nextRole === "faculty") return "portal"
-            if (nextRole === "student") return "sections"
-            return "studio"
-          }
+          if (currentView === "access") return "studio"
           return currentView
         })
       } catch {
@@ -118,12 +111,6 @@ export default function Page() {
       setView("access")
       return
     }
-
-    if (!isFaculty && nextView === "portal") {
-      alert("Access Denied: The Faculty Evaluation Portal is restricted to faculty profiles.")
-      return
-    }
-
     setView(nextView)
   }
 
@@ -135,7 +122,6 @@ export default function Page() {
             active={view}
             onNavigate={handleNavigate}
             authed={authed}
-            canAccessPortal={isFaculty}
             name={profileName}
             role={profileRole}
           />
@@ -155,13 +141,9 @@ export default function Page() {
             <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           {view === "access" && (
             <AccessGate
-              onAuthed={async (role: UserRole) => {
+              onAuthed={async () => {
                 setAuthed(true)
-                setProfileRole(role)
 
-                // Immediately fetch the user's profile to set profileId / profileName
-                // so that downstream components like TeacherPortal have them available
-                // right away, rather than waiting for the async auth subscription.
                 try {
                   const { data: { user } } = await supabase.auth.getUser()
                   if (user?.id) {
@@ -175,26 +157,22 @@ export default function Page() {
                       const parsed = profile as ProfileRow
                       setProfileId(parsed.id)
                       setProfileName(parsed.full_name)
+                      setProfileRole(parsed.role)
                     }
                   }
                 } catch {
                   // Non-critical; profile will be fetched by onAuthStateChange eventually
                 }
 
-                setView(role === "faculty" ? "portal" : role === "student" ? "sections" : "studio")
+                setView("studio")
               }}
             />
           )}
               {view === "sections" && <StudentWorkspace />}
               {view === "studio" && <DocumentStudio />}
               {view === "graph" && <MethodologyGraph />}
-              {view === "portal" && isFaculty && (
+              {view === "portal" && (
                 <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
-              )}
-              {view === "portal" && !isFaculty && (
-                <div className="p-8 text-center text-destructive font-medium">
-                  Access Denied: You do not have permission to view the evaluation workspace dashboard.
-                </div>
               )}
             </div>
           </main>
