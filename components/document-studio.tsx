@@ -622,8 +622,8 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 items-start overflow-hidden">
-      <section className="flex flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8">
+    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-hidden">
+      <section className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background shrink-0">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -724,22 +724,22 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </div>
         </div>
 
-        <div className="p-3 bg-background">
+        <div className="flex min-h-0 flex-1 flex-col p-3 bg-background">
           {activeDoc ? (
-            <div className="flex flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs min-h-[600px]">
-              <div>
+            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border/80 bg-card p-3 shadow-xs">
+              <div className="shrink-0">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Visual Render Sandbox · Canvas Document Framework
                 </p>
                 <h3 className="mb-2 text-sm font-semibold text-foreground">{activeDoc.title}</h3>
               </div>
 
-              <div className="flex-1 border-t border-border/40 pt-2">
+              <div className="flex min-h-0 flex-1 flex-col border-t border-border/40 pt-2">
                 <PdfVisualViewer fileUrl={activeDoc.file_url} />
               </div>
             </div>
           ) : (
-            <div className="flex h-[600px] flex-col items-center justify-center p-8 text-center text-muted-foreground">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
               <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
               <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
