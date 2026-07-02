@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button"
 import { ChevronDown, GraduationCap, Lock, Mail, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
-type AuthRole = "student" | "faculty" | "researcher"
-
-const ROLE_OPTIONS = ["Student", "Faculty", "Researcher"] as const
-const MAJOR_OPTIONS = [
+const ROLES = ["Student", "Faculty", "Researcher"] as const
+const DOMAINS = [
   "Computer Engineering",
   "Electrical Engineering",
   "Medicine",
@@ -17,13 +15,15 @@ const MAJOR_OPTIONS = [
   "Data Science",
 ]
 
+type AuthRole = "student" | "faculty" | "researcher"
+
 export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void }) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<(typeof ROLE_OPTIONS)[number]>("Student")
-  const [major, setMajor] = useState(MAJOR_OPTIONS[0])
+  const [role, setRole] = useState<(typeof ROLES)[number]>("Student")
+  const [domain, setDomain] = useState(DOMAINS[0])
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
@@ -52,7 +52,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             data: {
               full_name: fullName || "New Academic User",
               role: dbRole,
-              academic_domain: major,
+              academic_domain: domain,
             },
           },
         })
@@ -74,16 +74,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
       if (error) throw error
       if (!data?.user) throw new Error("Authentication failed.")
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .maybeSingle()
-
-      if (profileError) throw profileError
-
-      const nextRole = profile?.role === "faculty" || profile?.role === "researcher" ? profile.role : "student"
-      onAuthed(nextRole)
+      onAuthed(dbRole)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred during authentication."
       console.error(err)
@@ -170,21 +161,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             </Field>
           )}
 
-          {isSignUp && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Role">
-                <SelectBox
-                  value={role}
-                  onChange={(value) => setRole(value as (typeof ROLE_OPTIONS)[number])}
-                  options={[...ROLE_OPTIONS]}
-                />
-              </Field>
-              <Field label="Major">
-                <SelectBox value={major} onChange={setMajor} options={MAJOR_OPTIONS} />
-              </Field>
-            </div>
-          )}
-
           <Field label="QU Academic Email">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
               <Mail className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -212,6 +188,15 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
               />
             </div>
           </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Role">
+              <SelectBox value={role} onChange={(value) => setRole(value as (typeof ROLES)[number])} options={[...ROLES]} />
+            </Field>
+            <Field label="Domain">
+              <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
+            </Field>
+          </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? "Verifying Credentials..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
@@ -256,14 +241,14 @@ function SelectBox({
   options,
 }: {
   value: string
-  onChange: (value: string) => void
+  onChange: (v: string) => void
   options: string[]
 }) {
   return (
     <div className="relative">
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full appearance-none rounded-lg border border-input bg-background py-2.5 pl-3 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring"
       >
         {options.map((option) => (
@@ -279,4 +264,3 @@ function SelectBox({
     </div>
   )
 }
-
