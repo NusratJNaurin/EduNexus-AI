@@ -748,7 +748,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 lg:col-span-4">
+      <section className="flex flex-col gap-4 lg:col-span-4 overflow-y-auto min-h-0">
         <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Single-File Metric Matrix</p>
           <div className="grid grid-cols-3 gap-2">
@@ -785,7 +785,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </div>
         )}
 
-        <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-[460px]">
+        <div className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden shadow-sm min-h-0">
           <div className="flex items-center justify-between border-b border-border p-3 bg-muted/20">
             <div className="flex items-center gap-1.5">
               <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
@@ -806,7 +806,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
             )}
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-3 max-h-[400px]">
+          <div className="flex-1 space-y-4 overflow-y-auto p-3 min-h-0">
             {activeDoc ? (
               messages.map((message) => (
                 <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
