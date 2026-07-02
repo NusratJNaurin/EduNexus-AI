@@ -622,8 +622,8 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-hidden">
-      <section className="flex flex-1 flex-col rounded-xl border border-border bg-card overflow-hidden lg:col-span-8">
+<div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-y-auto min-h-full">
+<section className="flex flex-1 flex-col rounded-xl border border-border bg-card lg:col-span-8">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background shrink-0">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
