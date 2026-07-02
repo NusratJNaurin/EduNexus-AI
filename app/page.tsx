@@ -128,8 +128,8 @@ export default function Page() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <div className="flex min-h-0 flex-1">
+    <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {authed && (
           <Sidebar
             active={view}
@@ -140,7 +140,7 @@ export default function Page() {
             role={profileRole}
           />
         )}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Topbar
             view={view}
             authed={authed}
@@ -151,8 +151,8 @@ export default function Page() {
               router.refresh()
             }}
           />
-          <main className="min-w-0 flex-1 overflow-x-hidden">
-            <div key={view} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div key={view} className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden">
           {view === "access" && (
             <AccessGate
               onAuthed={async (role: UserRole) => {
@@ -192,7 +192,7 @@ export default function Page() {
                 <TeacherPortal profileId={profileId} profileRole={profileRole} profileName={profileName} />
               )}
               {view === "portal" && !isFaculty && (
-                <div className="p-8 text-center text-destructive font-medium">
+                <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-center text-destructive font-medium">
                   Access Denied: You do not have permission to view the evaluation workspace dashboard.
                 </div>
               )}

@@ -348,7 +348,7 @@ export function MethodologyGraph() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 p-4 lg:p-5 w-full check-layout">
+      <div className="flex flex-col h-full check-layout">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] items-stretch">
           <section className="relative min-h-[78vh] flex-1 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-sm">
             <div className="flex items-center justify-between border-b border-border p-3 bg-card">

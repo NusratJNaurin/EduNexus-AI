@@ -72,7 +72,7 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
 
   if (!fileUrl) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
         No remote file URL associated with this record.
       </div>
     )
@@ -80,7 +80,7 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
 
   if (error) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-destructive/30 bg-destructive/10 text-xs text-destructive px-4 text-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-destructive/30 bg-destructive/10 text-xs text-destructive px-4 text-center">
         Failed to load PDF: {error}
       </div>
     )
@@ -88,18 +88,18 @@ export function PdfVisualViewer({ fileUrl }: PdfVisualViewerProps) {
 
   if (loading || !resolvedUrl) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground">
         Preparing private file access...
       </div>
     )
   }
 
   return (
-    <div className="w-full rounded-xl border border-border bg-muted/10 p-2">
+    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-muted/10 p-2">
       {/* Native Browser PDF Core Sandbox */}
       <iframe
         src={`${resolvedUrl}#toolbar=1&navpanes=0`}
-        className="h-[600px] w-full rounded-lg bg-background shadow-xs"
+        className="flex min-h-0 flex-1 w-full rounded-lg bg-background shadow-xs"
         title="PDF Document Viewer"
         onError={() => console.error("[PdfVisualViewer] iframe failed to load PDF at:", resolvedUrl.slice(0, 80))}
       />
