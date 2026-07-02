@@ -128,7 +128,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
+<div className="flex h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {authed && (
           <Sidebar
@@ -140,7 +140,7 @@ export default function Page() {
             role={profileRole}
           />
         )}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+<div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             view={view}
             authed={authed}
@@ -151,8 +151,8 @@ export default function Page() {
               router.refresh()
             }}
           />
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div key={view} className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden">
+<main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div key={view} className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
           {view === "access" && (
             <AccessGate
               onAuthed={async (role: UserRole) => {
