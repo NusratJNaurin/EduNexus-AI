@@ -154,7 +154,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Hazim Ahmed"
+                  placeholder="name"
                   className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
                 />
               </div>
@@ -189,14 +189,16 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             </div>
           </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Role">
-              <SelectBox value={role} onChange={(value) => setRole(value as (typeof ROLES)[number])} options={[...ROLES]} />
-            </Field>
-            <Field label="Domain">
-              <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
-            </Field>
-          </div>
+          {isSignUp && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Role">
+                <SelectBox value={role} onChange={(value) => setRole(value as (typeof ROLES)[number])} options={[...ROLES]} />
+              </Field>
+              <Field label="Domain">
+                <SelectBox value={domain} onChange={setDomain} options={DOMAINS} />
+              </Field>
+            </div>
+          )}
 
           <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? "Verifying Credentials..." : isSignUp ? "Create Academic Account" : "Enter Workspace"}
