@@ -348,9 +348,8 @@ export function MethodologyGraph() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-full check-layout">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] items-stretch">
-          <section className="relative min-h-[78vh] flex-1 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-sm">
+        <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-y-auto min-h-full">
+          <section className="relative lg:col-span-8 flex flex-1 flex-col rounded-xl border border-border bg-card shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-border p-3 bg-card">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-primary" aria-hidden="true" />
@@ -457,7 +456,7 @@ export function MethodologyGraph() {
             </div>
           </section>
 
-          <section className="flex flex-col gap-4 h-full min-h-[78vh]">
+          <section className="flex flex-col gap-4 lg:col-span-4 overflow-y-auto">
             <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground shadow-sm shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -633,7 +632,6 @@ export function MethodologyGraph() {
             </div>
           </div>
         )}
-      </div>
     </TooltipProvider>
   )
 }
