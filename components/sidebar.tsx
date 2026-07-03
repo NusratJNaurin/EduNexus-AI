@@ -13,10 +13,12 @@ import {
   AlertCircle,
   X,
   Loader2,
+  Pencil,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { sectionEnrollmentsCrud } from "@/lib/crud"
+import { EditProfileDialog } from "@/components/edit-profile-dialog"
 
 export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
 
@@ -78,6 +80,9 @@ export function Sidebar({
   const [inviteCode, setInviteCode] = useState("")
   const [joining, setJoining] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
+  const [profileDomain, setProfileDomain] = useState<string | null>(null)
 
   // Auto-dismiss toast after 4 seconds
   useEffect(() => {
@@ -155,6 +160,21 @@ export function Sidebar({
       setJoining(false)
     }
   }, [inviteCode])
+
+  const handleOpenEditProfile = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("academic_domain")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    setProfileUserId(user.id)
+    setProfileDomain(profile?.academic_domain ?? null)
+    setEditProfileOpen(true)
+  }, [])
 
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
@@ -273,7 +293,7 @@ export function Sidebar({
           <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
             {authed ? getInitials(name) : "—"}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
               {authed ? (name || "Academic User") : "Guest"}
             </p>
@@ -281,8 +301,31 @@ export function Sidebar({
               {authed ? (role || "Student") : "Not signed in"}
             </p>
           </div>
+          {authed && (
+            <button
+              type="button"
+              onClick={handleOpenEditProfile}
+              className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              aria-label="Edit profile"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+          )}
         </div>
       </div>
+
+      <EditProfileDialog
+        open={editProfileOpen}
+        onClose={() => setEditProfileOpen(false)}
+        userId={profileUserId}
+        initialName={name ?? null}
+        initialRole={role ?? null}
+        initialDomain={profileDomain}
+        onProfileUpdated={() => {
+          // Profile updated — parent will re-fetch on next render
+          setEditProfileOpen(false)
+        }}
+      />
     </aside>
   )
 }
