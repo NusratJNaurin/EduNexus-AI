@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  X,
 } from "lucide-react"
 import { classSectionsCrud, profilesCrud, researchDocumentsCrud, sectionEnrollmentsCrud } from "@/lib/crud"
 import { supabase } from "@/lib/supabase"
@@ -33,6 +34,7 @@ import type {
 } from "@/lib/types"
 import { normalizeRole, parseVivaFeedback } from "@/lib/types"
 import type { VivaFeedbackItem } from "@/lib/types"
+import { PdfVisualViewer } from "./PdfVisualViewer"
 
 type StudentCardRow = {
   id: string
@@ -169,6 +171,7 @@ export function TeacherPortal({
   const [loadingViva, setLoadingViva] = useState(false)
   const [activeVivaDocId, setActiveVivaDocId] = useState<string | null>(null)
   const [expandedVivaNodes, setExpandedVivaNodes] = useState<Set<string>>(new Set())
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
 
   const isFaculty = normalizeRole(profileRole) === "faculty"
 
@@ -323,6 +326,11 @@ export function TeacherPortal({
     return profiles.find((p) => p.id === selectedStudentId) ?? null
   }, [selectedStudentId, profiles])
 
+  const selectedDocument = useMemo(() => {
+    if (!selectedDocId) return null
+    return documents.find((d) => d.id === selectedDocId) ?? null
+  }, [selectedDocId, documents])
+
   const fetchStudentViva = async (studentId: string) => {
     setLoadingViva(true)
     setStudentVivaData(null)
@@ -342,13 +350,15 @@ export function TeacherPortal({
 
   const handleSelectStudent = (studentId: string) => {
     setSelectedStudentId(studentId)
+    setSelectedDocId(null)
     setActiveVivaDocId(null)
     setExpandedVivaNodes(new Set())
     void fetchStudentViva(studentId)
   }
 
-  const handleBackToRoster = () => {
+  const handleClosePanel = () => {
     setSelectedStudentId(null)
+    setSelectedDocId(null)
     setStudentVivaData(null)
     setActiveVivaDocId(null)
     setExpandedVivaNodes(new Set())
@@ -618,290 +628,75 @@ export function TeacherPortal({
       {error && <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">{error}</div>}
 
       {/* ── Roster Table ─────────────────────────────────────────────── */}
-      {!selectedStudentId ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-card-foreground">Live section roster</p>
-            </div>
-            {loading && <p className="text-xs text-muted-foreground">Refreshing live data...</p>}
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Live section roster</p>
           </div>
+          {loading && <p className="text-xs text-muted-foreground">Refreshing live data...</p>}
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3 font-semibold">Student</th>
-                  <th className="px-4 py-3 font-semibold">Section</th>
-                  <th className="px-4 py-3 font-semibold">Sessions</th>
-                  <th className="px-4 py-3 font-semibold">Last active</th>
-                  <th className="px-4 py-3 font-semibold">Active reading</th>
-                  <th className="px-4 py-3 font-semibold">Engagement</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 font-semibold">Student</th>
+                <th className="px-4 py-3 font-semibold">Section</th>
+                <th className="px-4 py-3 font-semibold">Sessions</th>
+                <th className="px-4 py-3 font-semibold">Last active</th>
+                <th className="px-4 py-3 font-semibold">Active reading</th>
+                <th className="px-4 py-3 font-semibold">Engagement</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!activeSection ? (
+                <tr>
+                  <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
+                    Create or select a section to inspect its live roster.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {!activeSection ? (
-                  <tr>
-                    <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
-                      Create or select a section to inspect its live roster.
+              ) : studentCards.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
+                    No enrolled students are linked to {sectionLabel} yet.
+                  </td>
+                </tr>
+              ) : (
+                studentCards.map((student) => (
+                  <tr
+                    key={student.id}
+                    onClick={() => handleSelectStudent(student.id)}
+                    className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-3 align-top">
+                      <p className="font-medium text-foreground">{student.name}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{student.email}</p>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{student.sections}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{student.sessions}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{student.lastActive}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{student.read}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                          <div className={`h-full rounded-full ${student.progressClass}`} style={{ width: `${student.engagement}%` }} />
+                        </div>
+                        <span className="font-mono text-xs text-foreground">{student.engagementLabel}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${student.badgeClass}`}>
+                        {student.status}
+                      </span>
                     </td>
                   </tr>
-                ) : studentCards.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-6 text-muted-foreground" colSpan={7}>
-                      No enrolled students are linked to {sectionLabel} yet.
-                    </td>
-                  </tr>
-                ) : (
-                  studentCards.map((student) => (
-                    <tr
-                      key={student.id}
-                      onClick={() => handleSelectStudent(student.id)}
-                      className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
-                    >
-                      <td className="px-4 py-3 align-top">
-                        <p className="font-medium text-foreground">{student.name}</p>
-                        <p className="font-mono text-xs text-muted-foreground">{student.email}</p>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.sections}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.sessions}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{student.lastActive}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.read}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-                            <div className={`h-full rounded-full ${student.progressClass}`} style={{ width: `${student.engagement}%` }} />
-                          </div>
-                          <span className="font-mono text-xs text-foreground">{student.engagementLabel}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${student.badgeClass}`}>
-                          {student.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        /* ── Student Detail Panel ───────────────────────────────────── */
-        <div className="space-y-4">
-          {/* Back button */}
-          <button
-            type="button"
-            onClick={handleBackToRoster}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to roster
-          </button>
-
-          {/* Level 1: Student Info */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                {selectedStudentCard?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "—"}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{selectedStudentCard?.name ?? "Unknown"}</p>
-                <p className="text-xs text-muted-foreground font-mono">{selectedStudentCard?.email}</p>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg border border-border bg-background p-2.5">
-                <p className="text-[10px] text-muted-foreground">Section</p>
-                <p className="text-xs font-medium text-foreground">{selectedStudentCard?.sections ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-2.5">
-                <p className="text-[10px] text-muted-foreground">Major</p>
-                <p className="text-xs font-medium text-foreground">{selectedStudentProfile?.academic_domain ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-2.5">
-                <p className="text-[10px] text-muted-foreground">Engagement</p>
-                <p className="text-xs font-medium text-foreground">{selectedStudentCard?.engagementLabel ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-2.5">
-                <p className="text-[10px] text-muted-foreground">Reading time</p>
-                <p className="text-xs font-medium text-foreground">{selectedStudentCard?.read ?? "—"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Level 1: Document List */}
-          {selectedStudentCard && selectedStudentCard.documents.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Uploaded Documents</p>
-              <div className="space-y-1">
-                {selectedStudentCard.documents.map((doc) => {
-                  const isActive = activeVivaDocId === doc.id
-                  const docVivaCount = studentVivaData?.filter((v) => v.document_id === doc.id).length ?? 0
-                  return (
-                    <button
-                      key={doc.id}
-                      type="button"
-                      onClick={() => setActiveVivaDocId(isActive ? null : doc.id)}
-                      className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
-                        isActive
-                          ? "border-primary bg-primary/5 text-foreground"
-                          : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="size-3.5 shrink-0 text-primary/70" />
-                        <span className="truncate font-medium">{doc.title || doc.file_name || "Untitled"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {docVivaCount > 0 && (
-                          <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            <Award className="size-3" />
-                            {docVivaCount} viva{docVivaCount !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                        {isActive ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Level 2: Viva Data for Active Document */}
-              {activeVivaDocId && vivaNodesForActiveDoc.length > 0 && (
-                <div className="mt-3 space-y-2 border-t border-border pt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Viva Assessment Results
-                  </p>
-                  {vivaNodesForActiveDoc.map((vivaNode) => {
-                    const feedbackItems: VivaFeedbackItem[] = parseVivaFeedback(vivaNode.viva_feedback)
-                    const isExpanded = expandedVivaNodes.has(vivaNode.node_id)
-                    return (
-                      <div key={vivaNode.node_id} className="rounded-lg border border-border bg-muted/20">
-                        <button
-                          type="button"
-                          onClick={() => toggleVivaNode(vivaNode.node_id)}
-                          className="w-full flex items-center justify-between px-3 py-2 text-left"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Mic className="size-3.5 text-primary/70" />
-                            <span className="text-xs font-medium text-foreground">{vivaNode.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {vivaNode.viva_score != null && (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                Score: {vivaNode.viva_score}
-                              </span>
-                            )}
-                            {isExpanded ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
-                          </div>
-                        </button>
-                        {isExpanded && (
-                          <div className="space-y-2 border-t border-border px-3 py-2">
-                            {feedbackItems.length > 0 ? (
-                              feedbackItems.map((item, idx) => (
-                                <div key={idx} className={`rounded-lg p-2.5 ${item.q ? "bg-primary/5 border border-primary/10" : "bg-background border border-border"}`}>
-                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                    {item.q ? "🗣️ Student Response" : "📋 AI Evaluation"}
-                                  </p>
-                                  <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">{item.text}</p>
-                                  <p className="mt-1 text-[10px] text-muted-foreground">{item.t}</p>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-muted-foreground italic">No viva assessment data available for this node.</p>
-                            )}
-                            {vivaNode.viva_score != null && (
-                              <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2">
-                                <Award className="size-4 text-primary" />
-                                <span className="text-xs font-semibold text-foreground">Final Score: {vivaNode.viva_score}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                ))
               )}
-
-              {/* Level 2: No viva for this doc */}
-              {activeVivaDocId && vivaNodesForActiveDoc.length === 0 && (
-                <div className="mt-3 border-t border-border pt-3">
-                  <p className="text-xs text-muted-foreground italic">No viva assessments recorded for this document.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Orphaned viva nodes (no document) */}
-          {vivaNodesWithNoDoc.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Other Viva Assessments</p>
-              <div className="space-y-1">
-                {vivaNodesWithNoDoc.map((vivaNode) => {
-                  const feedbackItems: VivaFeedbackItem[] = parseVivaFeedback(vivaNode.viva_feedback)
-                  const isExpanded = expandedVivaNodes.has(vivaNode.node_id)
-                  return (
-                    <div key={vivaNode.node_id} className="rounded-lg border border-border bg-muted/20">
-                      <button
-                        type="button"
-                        onClick={() => toggleVivaNode(vivaNode.node_id)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Mic className="size-3.5 text-primary/70" />
-                          <span className="text-xs font-medium text-foreground">{vivaNode.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {vivaNode.viva_score != null && (
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                              Score: {vivaNode.viva_score}
-                            </span>
-                          )}
-                          {isExpanded ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
-                        </div>
-                      </button>
-                      {isExpanded && (
-                        <div className="space-y-2 border-t border-border px-3 py-2">
-                          {feedbackItems.length > 0 ? (
-                            feedbackItems.map((item, idx) => (
-                              <div key={idx} className={`rounded-lg p-2.5 ${item.q ? "bg-primary/5 border border-primary/10" : "bg-background border border-border"}`}>
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                                  {item.q ? "🗣️ Student Response" : "📋 AI Evaluation"}
-                                </p>
-                                <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">{item.text}</p>
-                                <p className="mt-1 text-[10px] text-muted-foreground">{item.t}</p>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic">No viva assessment data available.</p>
-                          )}
-                          {vivaNode.viva_score != null && (
-                            <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2">
-                              <Award className="size-4 text-primary" />
-                              <span className="text-xs font-semibold text-foreground">Final Score: {vivaNode.viva_score}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Loading viva state */}
-          {loadingViva && (
-            <div className="rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground">
-              Loading assessment data...
-            </div>
-          )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -929,6 +724,185 @@ export function TeacherPortal({
           </Button>
         </div>
       </div>
+
+      {/* ── Right Side Overlay Panel ────────────────────────────────── */}
+      {selectedStudentId && selectedStudentCard && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClosePanel} />
+
+          {/* Panel */}
+          <div className="relative h-full w-[40vw] min-w-[400px] max-w-[70vw] overflow-y-auto border-l border-border bg-card shadow-2xl">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={handleClosePanel}
+              className="absolute right-3 top-3 z-10 flex size-8 items-center justify-center rounded-full bg-background/80 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="size-4" />
+            </button>
+
+            <div className="space-y-4 p-5">
+              {/* Level 1: Student Info */}
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-base font-bold text-primary">
+                    {selectedStudentCard.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "—"}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{selectedStudentCard.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{selectedStudentCard.email}</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border border-border bg-background p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Section</p>
+                    <p className="text-xs font-medium text-foreground">{selectedStudentCard.sections}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Major</p>
+                    <p className="text-xs font-medium text-foreground">{selectedStudentProfile?.academic_domain ?? "—"}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Engagement</p>
+                    <p className="text-xs font-medium text-foreground">{selectedStudentCard.engagementLabel}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Reading time</p>
+                    <p className="text-xs font-medium text-foreground">{selectedStudentCard.read}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Level 1: Document List */}
+              {selectedStudentCard.documents.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Uploaded Documents</p>
+                  <div className="space-y-1">
+                    {selectedStudentCard.documents.map((doc) => {
+                      const isActive = selectedDocId === doc.id
+                      const docVivaCount = studentVivaData?.filter((v) => v.document_id === doc.id).length ?? 0
+                      return (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => setSelectedDocId(isActive ? null : doc.id)}
+                          className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                            isActive
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="size-3.5 shrink-0 text-primary/70" />
+                            <span className="truncate font-medium">{doc.title || doc.file_name || "Untitled"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {docVivaCount > 0 && (
+                              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                <Award className="size-3" />
+                                {docVivaCount} viva{docVivaCount !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                            {isActive ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Level 2: Document Viewer + Summary */}
+              {selectedDocId && selectedDocument && (
+                <div className="space-y-3 border-t border-border pt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Document Review
+                  </p>
+                  <div className="rounded-lg border border-border bg-muted/20">
+                    <PdfVisualViewer fileUrl={selectedDocument.file_url} />
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Summary</p>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                      {selectedDocument.extracted_text?.slice(0, 2000) ?? "No extracted text available for this document."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Viva Assessments */}
+              {selectedStudentCard.documents.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-card-foreground">Viva Assessments</p>
+                  {vivaNodesWithNoDoc.length > 0 ? (
+                    <div className="space-y-1">
+                      {vivaNodesWithNoDoc.map((vivaNode) => {
+                        const feedbackItems: VivaFeedbackItem[] = parseVivaFeedback(vivaNode.viva_feedback)
+                        const isExpanded = expandedVivaNodes.has(vivaNode.node_id)
+                        return (
+                          <div key={vivaNode.node_id} className="rounded-lg border border-border bg-muted/20">
+                            <button
+                              type="button"
+                              onClick={() => toggleVivaNode(vivaNode.node_id)}
+                              className="w-full flex items-center justify-between px-3 py-2 text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Mic className="size-3.5 text-primary/70" />
+                                <span className="text-xs font-medium text-foreground">{vivaNode.label}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {vivaNode.viva_score != null && (
+                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                    Score: {vivaNode.viva_score}
+                                  </span>
+                                )}
+                                {isExpanded ? <ChevronUp className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="space-y-2 border-t border-border px-3 py-2">
+                                {feedbackItems.length > 0 ? (
+                                  feedbackItems.map((item, idx) => (
+                                    <div key={idx} className={`rounded-lg p-2.5 ${item.q ? "bg-primary/5 border border-primary/10" : "bg-background border border-border"}`}>
+                                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                                        {item.q ? "🗣️ Student Response" : "📋 AI Evaluation"}
+                                      </p>
+                                      <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">{item.text}</p>
+                                      <p className="mt-1 text-[10px] text-muted-foreground">{item.t}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-xs text-muted-foreground italic">No viva assessment data available.</p>
+                                )}
+                                {vivaNode.viva_score != null && (
+                                  <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2">
+                                    <Award className="size-4 text-primary" />
+                                    <span className="text-xs font-semibold text-foreground">Final Score: {vivaNode.viva_score}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No viva assessments recorded for these documents.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Loading viva state */}
+              {loadingViva && (
+                <div className="rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground">
+                  Loading assessment data...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
