@@ -91,6 +91,10 @@ create table if not exists public.concept_nodes (
   description   text,
   keywords      text[] not null default '{}',
   summary       text,
+  main_concepts text[] not null default '{}',
+  prerequisite_concepts text[] not null default '{}',
+  learning_objectives text[] not null default '{}',
+  is_knowledge_bearing boolean not null default false,
   position_x    numeric(8,2) not null default 0,
   position_y    numeric(8,2) not null default 0,
   viva_score    numeric(5,2),
@@ -186,6 +190,47 @@ language sql security definer
 stable
 as $$
   select * from public.class_sections where invite_code = code;
+$$;
+
+-- Teacher portal: fetch viva assessment data for a student, gated by section enrollment
+create or replace function public.get_student_viva_data(target_student_id uuid)
+returns table (
+  node_id uuid,
+  label text,
+  node_type text,
+  viva_score numeric,
+  viva_feedback text,
+  document_id uuid,
+  created_at timestamptz
+)
+language plpgsql security definer
+stable
+as $$
+begin
+  -- Only allow if the calling user is a faculty instructor of a section this student is enrolled in
+  if not exists (
+    select 1 from public.section_enrollments e
+    join public.class_sections s on s.id = e.section_id
+    where e.student_id = target_student_id
+    and s.instructor_id = auth.uid()
+  ) then
+    return;
+  end if;
+
+  return query
+  select 
+    cn.id,
+    cn.label,
+    cn.node_type::text,
+    cn.viva_score,
+    cn.viva_feedback,
+    cn.document_id,
+    cn.created_at
+  from public.concept_nodes cn
+  where cn.owner_id = target_student_id
+    and (cn.viva_feedback is not null or cn.viva_score is not null)
+  order by cn.created_at desc;
+end;
 $$;
 
 -- Class Sections Policies
