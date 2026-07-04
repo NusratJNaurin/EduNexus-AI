@@ -58,6 +58,7 @@ type VivaNodeRow = {
   node_type: string
   viva_score: number | null
   viva_feedback: string | null
+  summary: string | null
   document_id: string | null
   created_at: string
 }
@@ -825,7 +826,10 @@ export function TeacherPortal({
                   <div className="rounded-lg border border-border bg-background p-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Summary</p>
                     <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-                      {selectedDocument.extracted_text?.slice(0, 2000) ?? "No extracted text available for this document."}
+                      {(() => {
+                        const matchingViva = studentVivaData?.find((v) => v.document_id === selectedDocId)
+                        return matchingViva?.summary?.trim() || "No summary available for this document."
+                      })()}
                     </p>
                   </div>
                 </div>

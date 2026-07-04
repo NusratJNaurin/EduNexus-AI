@@ -200,6 +200,7 @@ returns table (
   node_type text,
   viva_score numeric,
   viva_feedback text,
+  summary text,
   document_id uuid,
   created_at timestamptz
 )
@@ -224,6 +225,7 @@ begin
     cn.node_type::text,
     cn.viva_score,
     cn.viva_feedback,
+    cn.summary,
     cn.document_id,
     cn.created_at
   from public.concept_nodes cn
