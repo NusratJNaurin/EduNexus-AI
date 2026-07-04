@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { sectionEnrollmentsCrud } from "@/lib/crud"
+import type { ClassSectionRow } from "@/lib/types"
 import { EditProfileDialog } from "@/components/edit-profile-dialog"
 
 export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
@@ -104,12 +105,13 @@ export function Sidebar({
     setToast(null)
 
     try {
-      // 1. Look up the class_sections record that matches this invite code
-      const { data: section, error: sectionError } = await supabase
-        .from("class_sections")
-        .select("*")
-        .eq("invite_code", code)
+      // 1. Look up the class_sections record that matches this invite code (bypasses RLS for pre-enrollment lookup)
+      const { data: sectionData, error: sectionError } = await supabase
+        .rpc("get_section_by_invite_code", { code })
         .maybeSingle()
+
+      // rpc with setof returns an array; extract the single row
+      const section: ClassSectionRow | null = sectionData as ClassSectionRow | null
 
       if (sectionError) throw sectionError
       if (!section) {

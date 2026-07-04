@@ -179,6 +179,15 @@ begin
 end;
 $$;
 
+-- Helper function to look up a section by invite code (bypasses RLS for pre-enrollment lookup)
+create or replace function public.get_section_by_invite_code(code text)
+returns setof public.class_sections
+language sql security definer
+stable
+as $$
+  select * from public.class_sections where invite_code = code;
+$$;
+
 -- Class Sections Policies
 drop policy if exists "Sections are viewable by instructor or members" on public.class_sections;
 create policy "Sections are viewable by instructor or members" on public.class_sections for select to authenticated
