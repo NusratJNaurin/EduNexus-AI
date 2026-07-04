@@ -59,7 +59,7 @@ export function Sidebar({
   const isResearcher = userRole === "researcher"
   const visibleNav = authed
     ? NAV.filter((item) => {
-        if (canAccessPortal) return item.key !== "sections"
+        if (userRole === "faculty") return item.key !== "sections"
         if (isResearcher) return item.key !== "sections" && item.key !== "portal"
         return item.key !== "portal"
       })
