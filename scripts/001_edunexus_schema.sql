@@ -168,6 +168,17 @@ begin
 end;
 $$;
 
+-- Helper function to validate a section invite code (bypasses RLS)
+create or replace function public.validate_section_invite(target_section_id uuid, target_invite_code text)
+returns boolean language plpgsql security definer as $$
+begin
+  return exists (
+    select 1 from public.class_sections
+    where id = target_section_id and invite_code = target_invite_code
+  );
+end;
+$$;
+
 -- Class Sections Policies
 drop policy if exists "Sections are viewable by instructor or members" on public.class_sections;
 create policy "Sections are viewable by instructor or members" on public.class_sections for select to authenticated
@@ -189,7 +200,7 @@ create policy "Enrollments are visible to instructors and enrolled students" on 
 
 drop policy if exists "Students can join a section with a matching invite code" on public.section_enrollments;
 create policy "Students can join a section with a matching invite code" on public.section_enrollments for insert to authenticated
-  with check (student_id = auth.uid() and exists (select 1 from public.class_sections sections where sections.id = section_enrollments.section_id and sections.invite_code = section_enrollments.invite_code));
+  with check (student_id = auth.uid() and public.validate_section_invite(section_enrollments.section_id, section_enrollments.invite_code));
 
 drop policy if exists "Students can leave their own section membership" on public.section_enrollments;
 create policy "Students can leave their own section membership" on public.section_enrollments for delete to authenticated using (student_id = auth.uid());
