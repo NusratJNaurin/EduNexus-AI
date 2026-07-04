@@ -73,14 +73,22 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   const [documentText, setDocumentText] = useState("")
   const [documentSummary, setDocumentSummary] = useState("")
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const chatStorageKey = activeDoc?.id ? `chat_history_${activeDoc.id}` : null
+  const chatStorageKey = activeDoc?.id && userId ? `chat_history_${userId}_${activeDoc.id}` : null
   const { loadMessages, saveMessages, clearMessages } = usePersistedMessages(chatStorageKey)
   const [messages, setMessages] = useState<ChatMessage[]>([])
 
   useEffect(() => {
-    void loadUserDocuments()
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.id) {
+        setUserId(user.id)
+      }
+      void loadUserDocuments()
+    }
+    void init()
   }, [])
 
   useEffect(() => {
@@ -138,7 +146,10 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
     setLoadingDocs(true)
     setErrorMsg("")
     try {
-      const data = await researchDocumentsCrud.fetchAll()
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id
+      const allDocs = await researchDocumentsCrud.fetchAll()
+      const data = currentUserId ? allDocs.filter((doc) => doc.owner_id === currentUserId) : []
       setDocuments(data)
       if (data.length > 0) {
         setActiveDoc((current) => current ?? data[0])
@@ -181,7 +192,9 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
       await researchDocumentsCrud.deleteById(docId)
       localStorage.removeItem(`summary_${docId}`)
-      localStorage.removeItem(`chat_history_${docId}`)
+      if (userId) {
+        localStorage.removeItem(`chat_history_${userId}_${docId}`)
+      }
 
       setDocuments((prev) => {
         const remaining = prev.filter((doc) => doc.id !== docId)
