@@ -157,6 +157,17 @@ create policy "Owners can update documents" on public.research_documents for upd
 drop policy if exists "Owners can delete documents" on public.research_documents;
 create policy "Owners can delete documents" on public.research_documents for delete to authenticated using (auth.uid() = owner_id);
 
+-- Helper function to check if a user is the instructor of a section (bypasses RLS)
+create or replace function public.check_is_section_instructor(section_uuid uuid, user_uuid uuid)
+returns boolean language plpgsql security definer as $$
+begin
+  return exists (
+    select 1 from public.class_sections
+    where id = section_uuid and instructor_id = user_uuid
+  );
+end;
+$$;
+
 -- Class Sections Policies
 drop policy if exists "Sections are viewable by instructor or members" on public.class_sections;
 create policy "Sections are viewable by instructor or members" on public.class_sections for select to authenticated
@@ -174,7 +185,7 @@ create policy "Instructors can delete own sections" on public.class_sections for
 -- Section Enrollments Policies
 drop policy if exists "Enrollments are visible to instructors and enrolled students" on public.section_enrollments;
 create policy "Enrollments are visible to instructors and enrolled students" on public.section_enrollments for select to authenticated
-  using (student_id = auth.uid() or exists (select 1 from public.class_sections sections where sections.id = section_enrollments.section_id and sections.instructor_id = auth.uid()));
+  using (student_id = auth.uid() or public.check_is_section_instructor(section_enrollments.section_id, auth.uid()));
 
 drop policy if exists "Students can join a section with a matching invite code" on public.section_enrollments;
 create policy "Students can join a section with a matching invite code" on public.section_enrollments for insert to authenticated
