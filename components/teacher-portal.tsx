@@ -482,6 +482,15 @@ export function TeacherPortal({
       return
     }
 
+    const existingSection = sections.find(
+      (section) => section.course_code === courseCode && section.section_number === sectionNumber
+    )
+
+    if (existingSection) {
+      setError(`Section ${courseCode} · Sec ${sectionNumber} already exists. Please use a different course code or section number.`)
+      return
+    }
+
     const inviteCode = buildInviteCode(courseCode, sectionNumber)
 
     try {
