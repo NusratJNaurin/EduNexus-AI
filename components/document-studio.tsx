@@ -26,6 +26,7 @@ import { z } from "zod"
 import { nodeTypeUpdateSchema } from "@/lib/api/validation" 
 export type NodeTypeUpdate = z.infer<typeof nodeTypeUpdateSchema>
 import { conceptEdgesCrud } from "@/lib/crud"
+import { isArabicText } from "@/lib/utils"
 
 interface DocumentStudioProps { onNodesUpdated?: () => void }
 
@@ -821,26 +822,29 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
 
           <div className="flex-1 space-y-4 overflow-y-auto p-3 min-h-0">
             {activeDoc ? (
-              messages.map((message) => (
-                <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
-                  <div className="flex items-start gap-1.5 max-w-[90%]">
-                    {!message.isUser && (
-                      <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground mt-0.5">
-                        <Sparkles className="size-3" aria-hidden="true" />
+              messages.map((message) => {
+                const messageIsArabic = isArabicText(message.text)
+                return (
+                  <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
+                    <div className="flex items-start gap-1.5 max-w-[90%]">
+                      {!message.isUser && (
+                        <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground mt-0.5">
+                          <Sparkles className="size-3" aria-hidden="true" />
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                          message.isUser
+                            ? "bg-primary text-primary-foreground rounded-br-sm"
+                            : "border border-border bg-background text-foreground rounded-tl-sm shadow-xs"
+                        } ${messageIsArabic ? "text-right" : ""}`}
+                      >
+                        {message.text}
                       </div>
-                    )}
-                    <div
-                      className={`rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                        message.isUser
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "border border-border bg-background text-foreground rounded-tl-sm shadow-xs"
-                      }`}
-                    >
-                      {message.text}
                     </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             ) : (
               <p className="text-center text-xs text-muted-foreground italic pt-12">
                 Select or upload a document to activate the AI analysis.

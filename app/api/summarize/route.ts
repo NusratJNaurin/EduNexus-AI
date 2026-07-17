@@ -2,6 +2,7 @@ import { generateJson, ServiceUnavailableError } from "@/lib/api/gemini"
 import { getErrorMessage, jsonOk, jsonError } from "@/lib/api/response"
 import { parseJsonBody, summarizeRequestSchema, summarizeResponseSchema } from "@/lib/api/validation"
 import type { SummarizeResponse } from "@/lib/types"
+import { isArabicText } from "@/lib/utils"
 
 const SUMMARIZE_RESPONSE_SCHEMA: Record<string, unknown> = {
   type: "OBJECT",
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
     const { text, fileName } = await parseJsonBody(request, summarizeRequestSchema)
     const cleanSubject = fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ")
 
+    // Detect if the document text is primarily Arabic
+    const docIsArabic = isArabicText(text)
+
     const prompt = `You are an elite academic and professional research assistant. Your task is to analyze the provided document text and return structured metadata about it.
 
 CONTEXT/FILENAME: The document is titled "${cleanSubject}".
@@ -37,7 +41,8 @@ CRITICAL INSTRUCTIONS:
   - true if the document teaches structured knowledge (textbook, lecture notes, tutorial, research paper, technical documentation).
   - false if the document is NOT suitable for dependency inference (e.g., reviews, invoices, marketing content, personal writing, administrative forms).
 - If is_knowledge_bearing is false, set main_concepts, prerequisite_concepts, and learning_objectives to empty arrays.
-- Be strict with is_knowledge_bearing — only set true for genuinely educational content.`
+- Be strict with is_knowledge_bearing — only set true for genuinely educational content.
+${docIsArabic ? "- LANGUAGE: The document is in Arabic. Write the summary, main_concepts, prerequisite_concepts, and learning_objectives in Arabic." : ""}`
 
     const result = await generateJson<SummarizeResponse>(prompt, summarizeResponseSchema, SUMMARIZE_RESPONSE_SCHEMA)
     return jsonOk(result as unknown as Record<string, unknown>)

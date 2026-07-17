@@ -414,6 +414,18 @@ After deployment, update the **Live Demo** URL at the top of this README.
 
 ---
 
+## Known Limitations / What I'd Do Differently
+
+1. **Single AI Provider Dependency** — The platform is currently hard-wired to Google Gemini 2.5 Flash with no fallback provider. A more resilient architecture would support multiple AI backends (e.g., OpenAI, Anthropic) with automatic failover, so the chat and summarization features remain available if one provider experiences an outage.
+
+2. **No Caching Layer** — Repeated identical queries to `/api/chat` re-invoke Gemini each time, increasing latency and API costs. Adding a semantic cache (e.g., Redis or an in-memory store for similar queries) would significantly improve response times for frequently asked questions.
+
+3. **No Automated Test Suite** — The project currently has no unit, integration, or end-to-end tests. Adding tests with Vitest and Playwright would improve maintainability and catch regressions when adding new features like the Arabic language support.
+
+4. **No Rate Limiting / Abuse Protection** — The `/api/chat`, `/api/summarize`, and `/api/viva` routes have no throttling. Without rate limiting, a malicious user could exhaust the Gemini API quota. A production-ready solution would add token-bucket or sliding-window rate limiting per user session.
+
+---
+
 ## License
 
 This project is developed as part of the Qatar University academic knowledge workspace initiative. Contact the project maintainers for licensing and usage terms.
