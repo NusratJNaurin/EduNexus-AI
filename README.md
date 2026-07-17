@@ -147,8 +147,6 @@ EduNexus-AI-Layout/
 ├── react-katex.d.ts                  # KaTeX type declarations
 ├── tsconfig.json                     # TypeScript configuration
 ├── README.md                         # This file
-├── README.pdf                        # PDF version of README
-├── README.png                        # README preview image
 └── SECURITY_REVIEW.md                # Security audit & review notes
 ```
 
