@@ -23,8 +23,10 @@
 
 - **Visual Methodology Mapping** — Upload research PDFs and render them as interactive relational graphs. Concept nodes represent papers, prerequisites, and research gaps, with draggable canvas positioning and edge relationships stored in Supabase.
 - **Precision Metric Isolation** — Automatically extracts and surfaces key document metrics including readability scores, complexity ratings, file size, page count, keyword tags, and confidence indicators in a compact metric matrix.
-- **Source-Grounded Chat** — An interactive Q&A assistant anchored to the active document. Queries are sent to a Gemini-powered `/api/chat` route with strict system instructions to confine answers to the uploaded text and reduce AI hallucinations.
-- **AI Document Summarization** — On upload, extracted text is summarized via `/api/summarize` to produce a concise 1–2 sentence overview of the paper's core topic and structural pillars.
+- **Source-Grounded Chat** — An interactive Q&A assistant anchored to the active document. Queries are sent to a Gemini-powered `/api/chat` route with strict system instructions to confine answers to the uploaded text and reduce AI hallucinations. Supports Arabic: if the user asks in Arabic, Gemini responds in Arabic; for short ambiguous queries, the document language is used as a fallback.
+- **AI Document Summarization** — On upload, extracted text is summarized via `/api/summarize` to produce a concise 1–2 sentence overview of the paper's core topic and structural pillars. Automatically detects Arabic documents and generates summaries in Arabic.
+- **Arabic PDF Support** — Uploaded Arabic-language PDFs are fully supported. Text extraction, AI summarization, and source-grounded chat all detect Arabic content via a Unicode heuristic and respond in the appropriate language. Chat bubbles with Arabic text are right-aligned for correct RTL rendering.
+- **Automated Dependency Inference** — On upload, the platform automatically analyzes a new document against existing documents to infer prerequisite, research-gap, and citation relationships via `/api/analyze-dependencies` and `/api/infer-dependencies`, populating the methodology graph with structured edges.
 - **PDF Visual Viewer** — In-browser PDF rendering with `react-pdf` and `pdfjs-dist`, plus client-side text extraction for downstream AI and analytics pipelines.
 - **Socratic Viva Pod (Student)** — Record oral-defense responses against selected concept nodes. Audio is transcribed and evaluated by Gemini via `/api/viva`, with feedback logs persisted per node.
 - **Teacher Evaluation Portal (Faculty)** — Invite-only class sections, engagement timelines, completion metrics, student roster tracking, and export controls for CSV performance matrices and JSON audit trails.
@@ -175,7 +177,9 @@ The root application directory using Next.js 16 App Router conventions.
 |-----------|----------------|
 | `access-gate.tsx` | Authentication gate. Renders sign-up/sign-in forms with QU email domain validation (`@qu.edu.qa`, `@student.qu.edu.qa`). Handles role selection (Student, Faculty, Researcher) during registration. |
 | `document-studio.tsx` | Primary student/researcher workspace. Manages PDF upload flow, displays extracted metrics (readability, complexity, page count), renders AI summary, and hosts the source-grounded chat interface. |
+| `edit-profile-dialog.tsx` | Modal dialog for editing user profile information (full name, academic domain, avatar). |
 | `methodology-graph.tsx` | Interactive concept graph workspace. Renders draggable nodes (papers, prerequisites, research gaps) with edge relationships. Integrates Viva Pod for oral-defense practice on selected nodes. |
+| `student-workspace.tsx` | Top-level student/researcher layout component that orchestrates the Document Studio and Methodology Graph views with role-based routing. |
 | `teacher-portal.tsx` | Faculty-only dashboard. Displays class sections, student engagement timelines, document activity metrics, and provides CSV/JSON export functionality. |
 | `PdfVisualViewer.tsx` | In-browser PDF rendering component using `react-pdf` and `pdfjs-dist`. Handles page navigation, zoom, and client-side text extraction for AI processing. |
 | `sidebar.tsx` | Role-aware navigation. Shows/hides menu items based on user role (Student/Researcher vs Faculty). Includes links to Document Studio, Methodology Graph, and Teacher Portal. |
@@ -191,13 +195,15 @@ shadcn/ui components built on Radix UI primitives and styled with Tailwind CSS. 
 |--------|----------------|
 | `api-client.ts` | Typed wrapper around Supabase client. Provides reusable methods for common queries (fetch documents, get nodes, etc.). |
 | `crud.ts` | Generic CRUD helper functions for Supabase tables. Abstracts common create/read/update/delete patterns. |
+| `force-layout.ts` | Force-directed graph layout algorithm for positioning concept nodes in the methodology graph. |
 | `pdfWorker.ts` | Client-side PDF text extraction using `pdfjs-dist`. Runs in a Web Worker to avoid blocking the main thread during document processing. |
 | `supabase.ts` | Browser-side Supabase client initialization using `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. |
-| `utils.ts` | Utility functions including `cn()` for Tailwind class merging (uses `clsx` + `tailwind-merge`). |
+| `utils.ts` | Utility functions including `cn()` for Tailwind class merging (uses `clsx` + `tailwind-merge`) and `isArabicText()` for Arabic language detection via Unicode heuristic. |
 | `utils_clients.ts` | SSR-safe Supabase client for browser components. Handles cookie-based session management. |
 | `utils_server.ts` | SSR-safe Supabase client for server components and API routes. Uses service role key when available. |
 | `utils_middleware.ts` | Supabase client configured for Next.js middleware (auth token refresh, route protection). |
 | `api/gemini.ts` | Google Gemini 2.5 Flash integration. Contains prompt templates for chat, summarization, and Viva Pod evaluation. Handles streaming responses and error states. |
+| `api/response.ts` | Standardized API response helpers (`jsonOk`, `jsonError`, `getErrorMessage`) used across all API routes. |
 | `api/validation.ts` | Input validation schemas using Zod. Validates API request payloads (chat messages, audio files, document metadata). |
 
 ### `lib/types/` — TypeScript Definitions
@@ -216,6 +222,8 @@ Centralized type definitions for the application domain:
 | Script | Purpose |
 |--------|---------|
 | `001_edunexus_schema.sql` | Complete Supabase database schema. Defines tables (`profiles`, `research_documents`, `class_sections`, `section_enrollments`, `concept_nodes`), enums (`user_role`, `concept_node_type`), Row-Level Security policies, triggers (`handle_new_user()`), and storage bucket policies. |
+| `002_knowledge_dependency_schema.sql` | Additional schema for knowledge dependency tracking — edge metadata, confidence scores, and relationship attributes for the methodology graph. |
+| `fix_enforce_qu_email_domain.sql` | Migration script to enforce Qatar University email domain constraints (`@qu.edu.qa`, `@student.qu.edu.qa`) at the database level. |
 
 ### `public/` — Static Assets
 
@@ -382,9 +390,11 @@ pnpm lint
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/chat` | `POST` | Document-grounded Q&A powered by Gemini 2.5 Flash |
-| `/api/summarize` | `POST` | Generates a concise academic summary from extracted PDF text |
-| `/api/viva` | `POST` | Transcribes and evaluates Viva Pod audio responses (multipart form) |
+| `/api/chat` | `POST` | Document-grounded Q&A powered by Gemini 2.5 Flash. Supports Arabic: responds in Arabic if the user asks in Arabic; falls back to document language for short ambiguous queries. |
+| `/api/summarize` | `POST` | Generates a concise academic summary from extracted PDF text. Automatically detects Arabic documents and produces Arabic summaries. |
+| `/api/analyze-dependencies` | `POST` | Analyzes a newly uploaded document against existing concept nodes to identify prerequisite, research-gap, and citation relationships. Returns structured edge data for the methodology graph. |
+| `/api/infer-dependencies` | `POST` | Infers dependency edges from prerequisite concepts extracted during summarization. Creates edges between the new document node and existing nodes based on shared concepts. |
+| `/api/viva` | `POST` | Transcribes and evaluates Viva Pod audio responses (multipart form). |
 
 ---
 
