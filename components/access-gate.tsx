@@ -128,7 +128,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
         </p>
       </div>
 
-      <div className="flex items-center justify-center p-6 sm:p-10">
+      <div className="flex items-center justify-center px-6 py-4 sm:px-10 sm:py-6">
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-7 shadow-sm"
