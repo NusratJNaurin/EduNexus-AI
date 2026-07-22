@@ -85,7 +85,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
   }
 
   return (
-    <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-2">
+    <div className="grid h-[calc(100vh-3.5rem)] grid-cols-1 overflow-hidden lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -128,7 +128,7 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
         </p>
       </div>
 
-      <div className="flex items-center justify-center px-6 py-4 sm:px-10 sm:py-6">
+      <div className="flex items-center justify-center overflow-y-auto px-6 py-4 sm:px-10 sm:py-6">
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-7 shadow-sm"
