@@ -182,53 +182,52 @@ export function Sidebar({
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       {/* Corner mashrabiya medallions */}
       <svg
-        viewBox="0 0 400 600"
-        preserveAspectRatio="xMidYMid slice"
+        width="180" height="180" viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute inset-0 h-full w-full"
+        className="pointer-events-none absolute right-0 top-0 opacity-[0.13]"
         aria-hidden="true"
       >
-        <defs>
-          {/* Top-right medallion */}
-          <g id="medallion-tr">
-            <path d="M 320 0 L 400 0 L 400 80 Z" fill="#4A1C2A" opacity="0.92"/>
-            <circle cx="360" cy="40" r="28" fill="none" stroke="#C5A059" strokeWidth="1.2" opacity="0.18"/>
-            <circle cx="360" cy="40" r="20" fill="none" stroke="#C5A059" strokeWidth="0.8" opacity="0.14"/>
-            <circle cx="360" cy="40" r="12" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="360" y1="12" x2="360" y2="68" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="332" y1="40" x2="388" y2="40" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="340" y1="20" x2="380" y2="60" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-            <line x1="380" y1="20" x2="340" y2="60" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-            <line x1="348" y1="28" x2="372" y2="52" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="372" y1="28" x2="348" y2="52" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="355" y1="22" x2="365" y2="58" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="365" y1="22" x2="355" y2="58" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <polygon points="360,28 364,40 360,52 356,40" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.12"/>
-            <polygon points="348,36 360,40 372,36 360,44" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-          </g>
-          {/* Bottom-left medallion */}
-          <g id="medallion-bl">
-            <path d="M 0 520 L 0 600 L 80 600 Z" fill="#4A1C2A" opacity="0.92"/>
-            <circle cx="40" cy="560" r="28" fill="none" stroke="#C5A059" strokeWidth="1.2" opacity="0.18"/>
-            <circle cx="40" cy="560" r="20" fill="none" stroke="#C5A059" strokeWidth="0.8" opacity="0.14"/>
-            <circle cx="40" cy="560" r="12" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="40" y1="532" x2="40" y2="588" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="12" y1="560" x2="68" y2="560" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
-            <line x1="20" y1="540" x2="60" y2="580" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-            <line x1="60" y1="540" x2="20" y2="580" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-            <line x1="28" y1="548" x2="52" y2="572" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="52" y1="548" x2="28" y2="572" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="35" y1="542" x2="45" y2="578" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <line x1="45" y1="542" x2="35" y2="578" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
-            <polygon points="40,548 44,560 40,572 36,560" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.12"/>
-            <polygon points="28,556 40,560 52,556 40,564" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
-          </g>
-        </defs>
-        <use href="#medallion-tr" x="0" y="0" width="400" height="600"/>
-        <use href="#medallion-bl" x="0" y="0" width="400" height="600"/>
+        <g stroke="#C5A059" fill="none">
+          <circle cx="140" cy="40" r="65" strokeWidth="3"/>
+          <circle cx="140" cy="40" r="55" strokeWidth="2.5"/>
+          <circle cx="140" cy="40" r="45" strokeWidth="2"/>
+          <circle cx="140" cy="40" r="35" strokeWidth="1.6"/>
+          <circle cx="140" cy="40" r="25" strokeWidth="1.3"/>
+          <circle cx="140" cy="40" r="15" strokeWidth="1"/>
+          <line x1="140" y1="-20" x2="140" y2="100" strokeWidth="2"/>
+          <line x1="75" y1="40" x2="205" y2="40" strokeWidth="2"/>
+          <line x1="90" y1="-10" x2="190" y2="90" strokeWidth="1.6"/>
+          <line x1="190" y1="-10" x2="90" y2="90" strokeWidth="1.6"/>
+          <line x1="100" y1="0" x2="180" y2="80" strokeWidth="1.3"/>
+          <line x1="180" y1="0" x2="100" y2="80" strokeWidth="1.3"/>
+          <polygon points="140,0 152,40 140,80 128,40" strokeWidth="1.5"/>
+          <polygon points="110,25 140,40 170,25 140,55" strokeWidth="1.3"/>
+        </g>
       </svg>
-      {/* Gradient veil for text readability */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sidebar/30 via-sidebar/10 to-sidebar/60" />
+
+      <svg
+        width="180" height="180" viewBox="0 0 180 180"
+        xmlns="http://www.w3.org/2000/svg"
+        className="pointer-events-none absolute bottom-0 left-0 opacity-[0.13]"
+        aria-hidden="true"
+      >
+        <g stroke="#C5A059" fill="none">
+          <circle cx="40" cy="140" r="65" strokeWidth="3"/>
+          <circle cx="40" cy="140" r="55" strokeWidth="2.5"/>
+          <circle cx="40" cy="140" r="45" strokeWidth="2"/>
+          <circle cx="40" cy="140" r="35" strokeWidth="1.6"/>
+          <circle cx="40" cy="140" r="25" strokeWidth="1.3"/>
+          <circle cx="40" cy="140" r="15" strokeWidth="1"/>
+          <line x1="40" y1="80" x2="40" y2="200" strokeWidth="2"/>
+          <line x1="-25" y1="140" x2="105" y2="140" strokeWidth="2"/>
+          <line x1="-10" y1="90" x2="90" y2="190" strokeWidth="1.6"/>
+          <line x1="90" y1="90" x2="-10" y2="190" strokeWidth="1.6"/>
+          <line x1="0" y1="100" x2="80" y2="180" strokeWidth="1.3"/>
+          <line x1="80" y1="100" x2="0" y2="180" strokeWidth="1.3"/>
+          <polygon points="40,100 52,140 40,180 28,140" strokeWidth="1.5"/>
+          <polygon points="10,125 40,140 70,125 40,155" strokeWidth="1.3"/>
+        </g>
+      </svg>
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -240,7 +239,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Primary">
+      <nav className="relative z-10 flex flex-1 flex-col gap-1 p-3" aria-label="Primary">
         <p className="px-3 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
           Workspace
         </p>
@@ -283,7 +282,7 @@ export function Sidebar({
 
       {/* ── Join Class with Code (student only) ─────────────────────────────── */}
       {isStudent && (
-        <div className="border-t border-sidebar-border bg-sidebar/85 px-4 py-3 backdrop-blur-sm">
+        <div className="relative z-10 border-t border-sidebar-border bg-sidebar/85 px-4 py-3 backdrop-blur-sm">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
             Join Class with Code
           </p>
@@ -340,7 +339,7 @@ export function Sidebar({
       )}
 
       {/* Dynamic Profile Identifier Interface */}
-      <div className="border-t border-sidebar-border p-4">
+      <div className="relative z-10 border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
             {authed ? getInitials(name) : "—"}
