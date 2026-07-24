@@ -182,7 +182,9 @@ export function Sidebar({
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       {/* Top-right mashrabiya lattice corner */}
       <svg
-        width="180" height="180" viewBox="0 0 180 180"
+        width="180"
+        height="180"
+        viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
         className="pointer-events-none absolute right-0 top-[88px] opacity-[0.35]"
         aria-hidden="true"
@@ -191,27 +193,89 @@ export function Sidebar({
           <clipPath id="quarterCircleTR">
             <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
           </clipPath>
-          <pattern id="latticeTile" width="30" height="30" patternUnits="userSpaceOnUse">
-            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1"/>
-            <rect x="7.5" y="7.5" width="15" height="15" fill="none" stroke="#C5A059" strokeWidth="0.8" transform="rotate(45 15 15)"/>
-            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5"/>
-            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5"/>
+          <pattern id="latticeTileTR" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
+            <rect
+              x="7.5"
+              y="7.5"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.8"
+              transform="rotate(45 15 15)"
+            />
+            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="15" y1="0" x2="15" y2="30" stroke="#C5A059" strokeWidth="0.4" />
+            <line x1="0" y1="15" x2="30" y2="15" stroke="#C5A059" strokeWidth="0.4" />
+            <line x1="0" y1="7.5" x2="7.5" y2="0" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="22.5" y1="0" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="0" y1="22.5" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="22.5" y1="30" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.5" />
+            <rect
+              x="3.75"
+              y="3.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 7.5 7.5)"
+            />
+            <rect
+              x="18.75"
+              y="3.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 22.5 7.5)"
+            />
+            <rect
+              x="3.75"
+              y="18.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 7.5 22.5)"
+            />
+            <rect
+              x="18.75"
+              y="18.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 22.5 22.5)"
+            />
+            <line x1="7.5" y1="0" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="22.5" y1="0" x2="22.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="0" y1="7.5" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="0" y1="22.5" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="3.75" y1="0" x2="3.75" y2="30" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="26.25" y1="0" x2="26.25" y2="30" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="0" y1="3.75" x2="30" y2="3.75" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="0" y1="26.25" x2="30" y2="26.25" stroke="#C5A059" strokeWidth="0.25" />
           </pattern>
         </defs>
-        {/* Lattice fill, clipped to quarter circle */}
-        <rect width="180" height="180" fill="url(#latticeTile)" clipPath="url(#quarterCircleTR)" />
-        {/* Arc boundary line */}
-        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5"/>
-        {/* Tick marks along top and right edges */}
-        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1"/>
+        <rect width="180" height="180" fill="url(#latticeTileTR)" clipPath="url(#quarterCircleTR)" />
+        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
+        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1" />
+        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1" />
+        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
+        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
       </svg>
-
+ 
       {/* Bottom-left mashrabiya lattice corner */}
       <svg
-        width="180" height="180" viewBox="0 0 180 180"
+        width="180"
+        height="180"
+        viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
         className="pointer-events-none absolute bottom-0 left-0 opacity-[0.35]"
         aria-hidden="true"
@@ -220,13 +284,82 @@ export function Sidebar({
           <clipPath id="quarterCircleBL">
             <path d="M 0 0 L 0 180 A 180 180 0 0 0 180 180 Z" />
           </clipPath>
+          <pattern id="latticeTileBL" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
+            <rect
+              x="7.5"
+              y="7.5"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.8"
+              transform="rotate(45 15 15)"
+            />
+            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="15" y1="0" x2="15" y2="30" stroke="#C5A059" strokeWidth="0.4" />
+            <line x1="0" y1="15" x2="30" y2="15" stroke="#C5A059" strokeWidth="0.4" />
+            <line x1="0" y1="7.5" x2="7.5" y2="0" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="22.5" y1="0" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="0" y1="22.5" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.5" />
+            <line x1="22.5" y1="30" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.5" />
+            <rect
+              x="3.75"
+              y="3.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 7.5 7.5)"
+            />
+            <rect
+              x="18.75"
+              y="3.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 22.5 7.5)"
+            />
+            <rect
+              x="3.75"
+              y="18.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 7.5 22.5)"
+            />
+            <rect
+              x="18.75"
+              y="18.75"
+              width="7.5"
+              height="7.5"
+              fill="none"
+              stroke="#C5A059"
+              strokeWidth="0.6"
+              transform="rotate(45 22.5 22.5)"
+            />
+            <line x1="7.5" y1="0" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="22.5" y1="0" x2="22.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="0" y1="7.5" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="0" y1="22.5" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.3" />
+            <line x1="3.75" y1="0" x2="3.75" y2="30" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="26.25" y1="0" x2="26.25" y2="30" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="0" y1="3.75" x2="30" y2="3.75" stroke="#C5A059" strokeWidth="0.25" />
+            <line x1="0" y1="26.25" x2="30" y2="26.25" stroke="#C5A059" strokeWidth="0.25" />
+          </pattern>
         </defs>
-        <rect width="180" height="180" fill="url(#latticeTile)" clipPath="url(#quarterCircleBL)" />
-        <path d="M 0 0 A 180 180 0 0 1 180 180" fill="none" stroke="#C5A059" strokeWidth="1.5"/>
-        <line x1="30" y1="180" x2="30" y2="172" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="60" y1="180" x2="60" y2="172" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="0" y1="30" x2="8" y2="30" stroke="#C5A059" strokeWidth="1"/>
-        <line x1="0" y1="60" x2="8" y2="60" stroke="#C5A059" strokeWidth="1"/>
+        <rect width="180" height="180" fill="url(#latticeTileBL)" clipPath="url(#quarterCircleBL)" />
+        <path d="M 0 0 A 180 180 0 0 1 180 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
+        <line x1="30" y1="180" x2="30" y2="172" stroke="#C5A059" strokeWidth="1" />
+        <line x1="60" y1="180" x2="60" y2="172" stroke="#C5A059" strokeWidth="1" />
+        <line x1="0" y1="30" x2="8" y2="30" stroke="#C5A059" strokeWidth="1" />
+        <line x1="0" y1="60" x2="8" y2="60" stroke="#C5A059" strokeWidth="1" />
       </svg>
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
