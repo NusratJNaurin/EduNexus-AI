@@ -180,53 +180,53 @@ export function Sidebar({
 
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-      {/* Corner mashrabiya medallions */}
+      {/* Top-right mashrabiya lattice corner */}
       <svg
         width="180" height="180" viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute right-0 top-0 opacity-[0.13]"
+        className="pointer-events-none absolute right-0 top-[88px] opacity-[0.35]"
         aria-hidden="true"
       >
-        <g stroke="#C5A059" fill="none">
-          <circle cx="140" cy="40" r="65" strokeWidth="3"/>
-          <circle cx="140" cy="40" r="55" strokeWidth="2.5"/>
-          <circle cx="140" cy="40" r="45" strokeWidth="2"/>
-          <circle cx="140" cy="40" r="35" strokeWidth="1.6"/>
-          <circle cx="140" cy="40" r="25" strokeWidth="1.3"/>
-          <circle cx="140" cy="40" r="15" strokeWidth="1"/>
-          <line x1="140" y1="-20" x2="140" y2="100" strokeWidth="2"/>
-          <line x1="75" y1="40" x2="205" y2="40" strokeWidth="2"/>
-          <line x1="90" y1="-10" x2="190" y2="90" strokeWidth="1.6"/>
-          <line x1="190" y1="-10" x2="90" y2="90" strokeWidth="1.6"/>
-          <line x1="100" y1="0" x2="180" y2="80" strokeWidth="1.3"/>
-          <line x1="180" y1="0" x2="100" y2="80" strokeWidth="1.3"/>
-          <polygon points="140,0 152,40 140,80 128,40" strokeWidth="1.5"/>
-          <polygon points="110,25 140,40 170,25 140,55" strokeWidth="1.3"/>
-        </g>
+        <defs>
+          <clipPath id="quarterCircleTR">
+            <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
+          </clipPath>
+          <pattern id="latticeTile" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1"/>
+            <rect x="7.5" y="7.5" width="15" height="15" fill="none" stroke="#C5A059" strokeWidth="0.8" transform="rotate(45 15 15)"/>
+            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5"/>
+            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5"/>
+          </pattern>
+        </defs>
+        {/* Lattice fill, clipped to quarter circle */}
+        <rect width="180" height="180" fill="url(#latticeTile)" clipPath="url(#quarterCircleTR)" />
+        {/* Arc boundary line */}
+        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5"/>
+        {/* Tick marks along top and right edges */}
+        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1"/>
       </svg>
 
+      {/* Bottom-left mashrabiya lattice corner */}
       <svg
         width="180" height="180" viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute bottom-0 left-0 opacity-[0.13]"
+        className="pointer-events-none absolute bottom-0 left-0 opacity-[0.35]"
         aria-hidden="true"
       >
-        <g stroke="#C5A059" fill="none">
-          <circle cx="40" cy="140" r="65" strokeWidth="3"/>
-          <circle cx="40" cy="140" r="55" strokeWidth="2.5"/>
-          <circle cx="40" cy="140" r="45" strokeWidth="2"/>
-          <circle cx="40" cy="140" r="35" strokeWidth="1.6"/>
-          <circle cx="40" cy="140" r="25" strokeWidth="1.3"/>
-          <circle cx="40" cy="140" r="15" strokeWidth="1"/>
-          <line x1="40" y1="80" x2="40" y2="200" strokeWidth="2"/>
-          <line x1="-25" y1="140" x2="105" y2="140" strokeWidth="2"/>
-          <line x1="-10" y1="90" x2="90" y2="190" strokeWidth="1.6"/>
-          <line x1="90" y1="90" x2="-10" y2="190" strokeWidth="1.6"/>
-          <line x1="0" y1="100" x2="80" y2="180" strokeWidth="1.3"/>
-          <line x1="80" y1="100" x2="0" y2="180" strokeWidth="1.3"/>
-          <polygon points="40,100 52,140 40,180 28,140" strokeWidth="1.5"/>
-          <polygon points="10,125 40,140 70,125 40,155" strokeWidth="1.3"/>
-        </g>
+        <defs>
+          <clipPath id="quarterCircleBL">
+            <path d="M 0 0 L 0 180 A 180 180 0 0 0 180 180 Z" />
+          </clipPath>
+        </defs>
+        <rect width="180" height="180" fill="url(#latticeTile)" clipPath="url(#quarterCircleBL)" />
+        <path d="M 0 0 A 180 180 0 0 1 180 180" fill="none" stroke="#C5A059" strokeWidth="1.5"/>
+        <line x1="30" y1="180" x2="30" y2="172" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="60" y1="180" x2="60" y2="172" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="0" y1="30" x2="8" y2="30" stroke="#C5A059" strokeWidth="1"/>
+        <line x1="0" y1="60" x2="8" y2="60" stroke="#C5A059" strokeWidth="1"/>
       </svg>
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
