@@ -179,8 +179,31 @@ export function Sidebar({
   }, [])
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+      {/* Mashrabiya lattice background texture */}
+      <svg
+        viewBox="0 0 800 600"
+        preserveAspectRatio="xMidYMid slice"
+        xmlns="http://www.w3.org/2000/svg"
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern id="sidebar-mashrabiya" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+            <rect width="80" height="80" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12" />
+            <rect x="11.7" y="11.7" width="56.6" height="56.6" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12" transform="rotate(45 40 40)" />
+            <line x1="0" y1="0" x2="80" y2="80" stroke="#C5A059" strokeWidth="0.3" opacity="0.08" />
+            <line x1="80" y1="0" x2="0" y2="80" stroke="#C5A059" strokeWidth="0.3" opacity="0.08" />
+            <line x1="40" y1="0" x2="40" y2="80" stroke="#C5A059" strokeWidth="0.3" opacity="0.08" />
+            <line x1="0" y1="40" x2="80" y2="40" stroke="#C5A059" strokeWidth="0.3" opacity="0.08" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#sidebar-mashrabiya)" />
+      </svg>
+      {/* Gradient veil for text readability */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sidebar/30 via-sidebar/10 to-sidebar/60" />
+
+      <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <GraduationCap className="size-6" aria-hidden="true" />
         </div>
