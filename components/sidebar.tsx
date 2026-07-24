@@ -179,40 +179,69 @@ export function Sidebar({
   }, [])
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-[#d2b47a]/20 bg-[linear-gradient(180deg,#4f1021_0%,#53111f_36%,#4a0f1d_100%)] text-[#f7e9d6] shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] md:flex">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_0%,rgba(197,160,89,0.2),transparent_28%),radial-gradient(circle_at_12%_95%,rgba(197,160,89,0.12),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_30%,rgba(0,0,0,0.1))]" />
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+      {/* Corner mashrabiya medallions */}
       <svg
-        viewBox="0 0 800 800"
-        preserveAspectRatio="none"
+        viewBox="0 0 400 600"
+        preserveAspectRatio="xMidYMid slice"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-55"
+        className="pointer-events-none absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
-        <path d="M800 0H672c-9 0-18 4-24 11l-37 42c-6 7-15 11-24 11h-42c-10 0-18-8-18-18V0" fill="none" stroke="#A25656" strokeOpacity="0.42" strokeWidth="6" />
-        <path d="M0 800h128c9 0 18-4 24-11l37-42c6-7 15-11 24-11h42c10 0 18 8 18 18v46" fill="none" stroke="#A25656" strokeOpacity="0.42" strokeWidth="6" />
-        <path d="M737 0v118c0 9-4 18-11 24l-42 37c-7 6-11 15-11 24v42c0 10 8 18 18 18h109" fill="none" stroke="#A25656" strokeOpacity="0.42" strokeWidth="6" />
-        <path d="M63 800V682c0-9 4-18 11-24l42-37c7-6 11-15 11-24v-42c0-10-8-18-18-18H0" fill="none" stroke="#A25656" strokeOpacity="0.42" strokeWidth="6" />
-        <circle cx="723" cy="77" r="60" fill="none" stroke="#C5A059" strokeOpacity="0.15" strokeWidth="10" />
-        <circle cx="723" cy="77" r="35" fill="none" stroke="#C5A059" strokeOpacity="0.12" strokeWidth="8" />
-        <circle cx="77" cy="723" r="60" fill="none" stroke="#C5A059" strokeOpacity="0.12" strokeWidth="10" />
-        <circle cx="77" cy="723" r="35" fill="none" stroke="#C5A059" strokeOpacity="0.1" strokeWidth="8" />
+        <defs>
+          {/* Top-right medallion */}
+          <g id="medallion-tr">
+            <path d="M 320 0 L 400 0 L 400 80 Z" fill="#4A1C2A" opacity="0.92"/>
+            <circle cx="360" cy="40" r="28" fill="none" stroke="#C5A059" strokeWidth="1.2" opacity="0.18"/>
+            <circle cx="360" cy="40" r="20" fill="none" stroke="#C5A059" strokeWidth="0.8" opacity="0.14"/>
+            <circle cx="360" cy="40" r="12" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="360" y1="12" x2="360" y2="68" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="332" y1="40" x2="388" y2="40" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="340" y1="20" x2="380" y2="60" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+            <line x1="380" y1="20" x2="340" y2="60" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+            <line x1="348" y1="28" x2="372" y2="52" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="372" y1="28" x2="348" y2="52" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="355" y1="22" x2="365" y2="58" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="365" y1="22" x2="355" y2="58" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <polygon points="360,28 364,40 360,52 356,40" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.12"/>
+            <polygon points="348,36 360,40 372,36 360,44" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+          </g>
+          {/* Bottom-left medallion */}
+          <g id="medallion-bl">
+            <path d="M 0 520 L 0 600 L 80 600 Z" fill="#4A1C2A" opacity="0.92"/>
+            <circle cx="40" cy="560" r="28" fill="none" stroke="#C5A059" strokeWidth="1.2" opacity="0.18"/>
+            <circle cx="40" cy="560" r="20" fill="none" stroke="#C5A059" strokeWidth="0.8" opacity="0.14"/>
+            <circle cx="40" cy="560" r="12" fill="none" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="40" y1="532" x2="40" y2="588" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="12" y1="560" x2="68" y2="560" stroke="#C5A059" strokeWidth="0.6" opacity="0.12"/>
+            <line x1="20" y1="540" x2="60" y2="580" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+            <line x1="60" y1="540" x2="20" y2="580" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+            <line x1="28" y1="548" x2="52" y2="572" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="52" y1="548" x2="28" y2="572" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="35" y1="542" x2="45" y2="578" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <line x1="45" y1="542" x2="35" y2="578" stroke="#C5A059" strokeWidth="0.4" opacity="0.08"/>
+            <polygon points="40,548 44,560 40,572 36,560" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.12"/>
+            <polygon points="28,556 40,560 52,556 40,564" fill="none" stroke="#C5A059" strokeWidth="0.5" opacity="0.10"/>
+          </g>
+        </defs>
+        <use href="#medallion-tr" x="0" y="0" width="400" height="600"/>
+        <use href="#medallion-bl" x="0" y="0" width="400" height="600"/>
       </svg>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.08)_52%,rgba(35,5,10,0.18)_100%)]" />
+      {/* Gradient veil for text readability */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sidebar/30 via-sidebar/10 to-sidebar/60" />
 
-      <div className="relative z-10 border-b border-white/10 px-5 py-5">
-        <div className="flex items-center gap-3 rounded-[20px] border border-[#d7bb7e]/10 bg-[rgba(46,8,16,0.24)] px-4 py-3 shadow-[0_14px_32px_rgba(20,3,8,0.2)] backdrop-blur-[2px]">
-          <div className="flex size-11 items-center justify-center rounded-[16px] bg-[#d3b16f] text-[#22120d] shadow-[0_10px_20px_rgba(0,0,0,0.2)]">
-            <GraduationCap className="size-6" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[17px] font-semibold tracking-[-0.02em] text-[#fff4e2]">EduNexus AI</p>
-            <p className="truncate text-sm text-[#f7e9d6]/68">Qatar University</p>
-          </div>
+      <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          <GraduationCap className="size-6" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold tracking-tight">EduNexus AI</p>
+          <p className="truncate text-xs text-sidebar-foreground/60">Qatar University</p>
         </div>
       </div>
 
-      <nav className="relative z-10 flex flex-1 flex-col gap-1 px-4 pb-4 pt-5" aria-label="Primary">
-        <p className="px-2 pb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f2d8c5]/45">
+      <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Primary">
+        <p className="px-3 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
           Workspace
         </p>
         {visibleNav.map((item) => {
@@ -227,26 +256,26 @@ export function Sidebar({
               disabled={locked}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "group flex items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm transition-all duration-200",
+                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                 isActive
-                  ? "bg-[#d3b16f] text-[#24140f] shadow-[0_14px_30px_rgba(0,0,0,0.18)]"
-                  : "text-[#f7e9d6]/92 hover:bg-white/6 hover:text-[#fff7ea]",
-                locked && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-[#f7e9d6]/92",
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                locked && "cursor-not-allowed opacity-40 hover:bg-transparent",
               )}
             >
-              <Icon className={cn("size-5 shrink-0", isActive ? "text-[#24140f]" : "text-[#f3debf]/88")} aria-hidden="true" />
+              <Icon className="size-5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium leading-tight tracking-[-0.01em]">{item.label}</span>
+                <span className="block truncate font-medium leading-tight">{item.label}</span>
                 <span
                   className={cn(
                     "block truncate text-xs leading-tight",
-                    isActive ? "text-[#24140f]/72" : "text-[#f7e9d6]/50",
+                    isActive ? "text-sidebar-primary-foreground/70" : "text-sidebar-foreground/45",
                   )}
                 >
                   {item.sub}
                 </span>
               </span>
-              {locked && <Lock className={cn("size-3.5 shrink-0", isActive ? "text-[#24140f]/75" : "text-[#f7e9d6]/55")} aria-hidden="true" />}
+              {locked && <Lock className="size-3.5 shrink-0" aria-hidden="true" />}
             </button>
           )
         })}
@@ -254,8 +283,8 @@ export function Sidebar({
 
       {/* ── Join Class with Code (student only) ─────────────────────────────── */}
       {isStudent && (
-        <div className="relative z-10 border-t border-white/10 px-4 py-3">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f2d8c5]/45">
+        <div className="border-t border-sidebar-border bg-sidebar/85 px-4 py-3 backdrop-blur-sm">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
             Join Class with Code
           </p>
           <div className="flex items-center gap-2">
@@ -265,13 +294,13 @@ export function Sidebar({
               placeholder="Enter invite code"
               disabled={joining}
               onKeyDown={(e) => { if (e.key === "Enter") handleJoinClass() }}
-              className="flex-1 rounded-full border border-white/8 bg-[rgba(255,255,255,0.05)] px-4 py-2.5 text-sm text-[#fff4e2] outline-none placeholder:text-[#f7e9d6]/38 transition focus:border-[#d3b16f]/70 focus:bg-[rgba(255,255,255,0.07)] disabled:opacity-50"
+              className="flex-1 rounded-lg border border-sidebar-border bg-sidebar-accent px-2.5 py-1.5 text-xs text-sidebar-foreground outline-none placeholder:text-sidebar-foreground/40 transition focus:border-sidebar-primary disabled:opacity-50"
             />
             <button
               type="button"
               onClick={handleJoinClass}
               disabled={joining || !inviteCode.trim()}
-              className="flex shrink-0 items-center gap-1 rounded-full bg-[#d3b16f] px-4 py-2.5 text-sm font-medium text-[#24140f] transition hover:bg-[#e0c07d] disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1 rounded-lg bg-sidebar-primary px-2.5 py-1.5 text-xs font-medium text-sidebar-primary-foreground transition hover:bg-sidebar-primary/90 disabled:opacity-50"
             >
               {joining ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -286,10 +315,10 @@ export function Sidebar({
           {toast && (
             <div
               className={cn(
-                "mt-2 flex items-center gap-1.5 rounded-2xl px-3 py-2 text-[11px] font-medium transition-all",
+                "mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all",
                 toast.type === "success"
-                  ? "bg-emerald-500/15 text-emerald-200"
-                  : "bg-red-500/15 text-red-200",
+                  ? "bg-emerald-500/15 text-emerald-600"
+                  : "bg-red-500/15 text-red-600",
               )}
             >
               {toast.type === "success" ? (
@@ -301,7 +330,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={() => setToast(null)}
-                className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/10"
+                className="shrink-0 rounded p-0.5 hover:bg-black/10 transition-colors"
               >
                 <X className="size-3" />
               </button>
@@ -311,16 +340,16 @@ export function Sidebar({
       )}
 
       {/* Dynamic Profile Identifier Interface */}
-      <div className="relative z-10 border-t border-white/10 p-4">
-        <div className="flex items-center gap-3 rounded-[18px] border border-white/8 bg-[rgba(255,255,255,0.06)] px-4 py-3 shadow-[0_12px_26px_rgba(0,0,0,0.18)] backdrop-blur-[2px]">
-          <div className="flex size-11 items-center justify-center rounded-full bg-[#d3b16f] text-sm font-bold text-[#24140f] shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+      <div className="border-t border-sidebar-border p-4">
+        <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5">
+          <div className="flex size-9 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
             {authed ? getInitials(name) : "—"}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#fff4e2]">
+            <p className="truncate text-sm font-medium">
               {authed ? (name || "Academic User") : "Guest"}
             </p>
-            <p className="truncate text-xs capitalize text-[#f7e9d6]/56">
+            <p className="truncate text-xs text-sidebar-foreground/50 capitalize">
               {authed ? (role || "Student") : "Not signed in"}
             </p>
           </div>
@@ -328,7 +357,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={handleOpenEditProfile}
-              className="shrink-0 rounded-lg p-1.5 text-[#f7e9d6]/52 transition-colors hover:bg-white/10 hover:text-[#fff4e2]"
+              className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
               aria-label="Edit profile"
             >
               <Pencil className="size-3.5" />
