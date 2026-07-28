@@ -186,7 +186,7 @@ export function Sidebar({
         height="180"
         viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute right-0 top-[88px] opacity-[0.35]"
+        className="pointer-events-none absolute right-0 top-[88px] origin-top -scale-y-100 opacity-[0.35]"
         aria-hidden="true"
       >
         <defs>
