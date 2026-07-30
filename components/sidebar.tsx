@@ -282,7 +282,7 @@ export function Sidebar({
       >
         <defs>
           <clipPath id="quarterCircleBL">
-            <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
+            <path d="M 0 0 L 0 180 A 180 180 0 0 0 180 180 Z" />
           </clipPath>
           <pattern id="latticeTileBL" width="30" height="30" patternUnits="userSpaceOnUse">
             <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
@@ -354,12 +354,12 @@ export function Sidebar({
             <line x1="0" y1="26.25" x2="30" y2="26.25" stroke="#C5A059" strokeWidth="0.25" />
           </pattern>
         </defs>
-        <rect width="180" height="180" fill="url(#latticeTileTR)" clipPath="url(#quarterCircleTR)" />
-        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
-        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
+        <rect width="180" height="180" fill="url(#latticeTileBL)" clipPath="url(#quarterCircleBL)" />
+        <path d="M 0 0 A 180 180 0 0 1 180 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
+        <line x1="30" y1="180" x2="30" y2="172" stroke="#C5A059" strokeWidth="1" />
+        <line x1="60" y1="180" x2="60" y2="172" stroke="#C5A059" strokeWidth="1" />
+        <line x1="0" y1="30" x2="8" y2="30" stroke="#C5A059" strokeWidth="1" />
+        <line x1="0" y1="60" x2="8" y2="60" stroke="#C5A059" strokeWidth="1" />
       </svg>
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
