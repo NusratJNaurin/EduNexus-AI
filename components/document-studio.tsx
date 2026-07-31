@@ -60,6 +60,170 @@ function computeComplexityScore(text: string, pageCount: number): number {
   return parseFloat(Math.min(95, Math.max(45, 50 + density * 2)).toFixed(1))
 }
 
+// ─── Animated Empty State ─────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-5 py-12 select-none">
+      <div className="relative" style={{ animation: "floatScholar 4s ease-in-out infinite" }}>
+        <svg width="120" height="110" viewBox="0 0 120 110" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="72" width="100" height="6" rx="2" fill="#e05a3a" fillOpacity="0.2" />
+          <rect x="18" y="78" width="6" height="22" rx="1" fill="#e05a3a" fillOpacity="0.15" />
+          <rect x="96" y="78" width="6" height="22" rx="1" fill="#e05a3a" fillOpacity="0.15" />
+          <ellipse cx="60" cy="68" rx="18" ry="8" fill="#7b1d3a" fillOpacity="0.15" />
+          <rect x="48" y="40" width="24" height="32" rx="12" fill="#7b1d3a" fillOpacity="0.25" />
+          <circle cx="60" cy="32" r="14" fill="#f5e6c8" />
+          <rect x="46" y="22" width="28" height="5" rx="1" fill="#7b1d3a" />
+          <rect x="54" y="18" width="12" height="6" rx="1" fill="#7b1d3a" />
+          <line x1="74" y1="22" x2="78" y2="30" stroke="#7b1d3a" strokeWidth="1.5" />
+          <circle cx="78" cy="31" r="2" fill="#e05a3a" />
+          <circle cx="55" cy="33" r="1.5" fill="#5a3020" />
+          <circle cx="65" cy="33" r="1.5" fill="#5a3020" />
+          <path d="M55 38 Q60 41 65 38" fill="none" stroke="#5a3020" strokeWidth="1.2" strokeLinecap="round" />
+          <rect x="30" y="58" width="24" height="16" rx="2" fill="white" stroke="#e05a3a" strokeWidth="0.8" strokeOpacity="0.5" />
+          <line x1="33" y1="63" x2="51" y2="63" stroke="#7b1d3a" strokeWidth="0.8" strokeOpacity="0.4" />
+          <line x1="33" y1="66" x2="48" y2="66" stroke="#7b1d3a" strokeWidth="0.8" strokeOpacity="0.4" />
+          <line x1="33" y1="69" x2="50" y2="69" stroke="#7b1d3a" strokeWidth="0.8" strokeOpacity="0.4" />
+          <line x1="72" y1="42" x2="60" y2="58" stroke="#e05a3a" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M72 42 L76 36 L70 40 Z" fill="#e05a3a" fillOpacity="0.7" />
+        </svg>
+
+        <div className="absolute" style={{ top: "-18px", right: "-22px", animation: "floatPaper1 3.5s ease-in-out infinite" }}>
+          <svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
+            <rect width="28" height="34" rx="2" fill="white" stroke="#7b1d3a" strokeWidth="0.8" strokeOpacity="0.4" />
+            <line x1="5" y1="9" x2="23" y2="9" stroke="#7b1d3a" strokeWidth="0.7" strokeOpacity="0.35" />
+            <line x1="5" y1="13" x2="20" y2="13" stroke="#7b1d3a" strokeWidth="0.7" strokeOpacity="0.35" />
+            <line x1="5" y1="17" x2="22" y2="17" stroke="#7b1d3a" strokeWidth="0.7" strokeOpacity="0.35" />
+            <line x1="5" y1="21" x2="18" y2="21" stroke="#7b1d3a" strokeWidth="0.7" strokeOpacity="0.35" />
+          </svg>
+        </div>
+        <div className="absolute" style={{ top: "-8px", left: "-24px", animation: "floatPaper2 4.2s ease-in-out infinite 0.5s" }}>
+          <svg width="22" height="27" viewBox="0 0 22 27" xmlns="http://www.w3.org/2000/svg">
+            <rect width="22" height="27" rx="2" fill="#fff5f0" stroke="#e05a3a" strokeWidth="0.8" strokeOpacity="0.4" />
+            <line x1="4" y1="8" x2="18" y2="8" stroke="#e05a3a" strokeWidth="0.7" strokeOpacity="0.35" />
+            <line x1="4" y1="12" x2="15" y2="12" stroke="#e05a3a" strokeWidth="0.7" strokeOpacity="0.35" />
+            <line x1="4" y1="16" x2="17" y2="16" stroke="#e05a3a" strokeWidth="0.7" strokeOpacity="0.35" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="text-center space-y-2">
+        <p className="font-semibold text-sm" style={{ color: "#1a1a2e" }}>
+          Your Academic Sandbox is empty
+        </p>
+        <p className="text-xs leading-relaxed max-w-[240px]" style={{ color: "#717182" }}>
+          Upload research documents to spin up the text extractors and begin your analysis.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(224,90,58,0.08)", color: "#e05a3a" }}>
+        <Sparkles size={11} />
+        <span>AI-powered extraction ready</span>
+      </div>
+
+      <style>{`
+        @keyframes floatScholar {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes floatPaper1 {
+          0%, 100% { transform: translateY(0px) rotate(-6deg); }
+          50% { transform: translateY(-10px) rotate(-2deg); }
+        }
+        @keyframes floatPaper2 {
+          0%, 100% { transform: translateY(0px) rotate(5deg); }
+          50% { transform: translateY(-7px) rotate(9deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes chatPulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.08); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .nav-item {
+          position: relative;
+          transition: background 0.18s ease, transform 0.15s ease;
+        }
+        .nav-item:hover {
+          background: rgba(255,255,255,0.1) !important;
+          transform: translateX(2px);
+        }
+        .nav-item.active {
+          background: rgba(255,255,255,0.15) !important;
+        }
+        .nav-item::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%) scaleY(0);
+          width: 3px;
+          height: 70%;
+          background: rgba(255,255,255,0.9);
+          border-radius: 0 2px 2px 0;
+          transition: transform 0.18s ease;
+        }
+        .nav-item:hover::before,
+        .nav-item.active::before {
+          transform: translateY(-50%) scaleY(1);
+        }
+        .metric-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          cursor: default;
+        }
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .upload-btn {
+          position: relative;
+          overflow: hidden;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .upload-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(224,90,58,0.35);
+        }
+        .upload-btn:active {
+          transform: translateY(0px);
+        }
+        .upload-btn::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+          background-size: 200% 100%;
+          animation: shimmer 2.4s linear infinite;
+        }
+        .chat-shimmer {
+          background: linear-gradient(90deg, #ececf0 0%, #e0e0e8 50%, #ececf0 100%);
+          background-size: 200% 100%;
+          animation: shimmer 2s linear infinite;
+          border-radius: 6px;
+        }
+        .send-btn {
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .send-btn:hover {
+          transform: scale(1.08);
+          background: #e05a3a !important;
+        }
+        .pattern-hover-zone:hover .mashrabiya-overlay {
+          opacity: 0.28 !important;
+        }
+        .fade-in {
+          animation: fadeInUp 0.4s ease both;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   const [documents, setDocuments] = useState<ResearchDocumentRow[]>([])
   const [activeDoc, setActiveDoc] = useState<ResearchDocumentRow | null>(null)
@@ -753,11 +917,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
               </div>
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
-              <UploadCloud className="size-12 stroke-1 mb-2 text-muted-foreground/60" />
-              <p className="text-sm font-medium">Your Academic Sandbox is empty</p>
-              <p className="text-xs max-w-xs mt-1">Upload research documents above to spin up the text extractors.</p>
-            </div>
+            <EmptyState />
           )}
         </div>
       </section>
