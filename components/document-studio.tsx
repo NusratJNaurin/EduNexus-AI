@@ -133,14 +133,6 @@ function EmptyState() {
           0%, 100% { transform: translateY(0px) rotate(5deg); }
           50% { transform: translateY(-7px) rotate(9deg); }
         }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes chatPulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.08); }
-        }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
@@ -199,19 +191,6 @@ function EmptyState() {
           background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
           background-size: 200% 100%;
           animation: shimmer 2.4s linear infinite;
-        }
-        .chat-shimmer {
-          background: linear-gradient(90deg, #ececf0 0%, #e0e0e8 50%, #ececf0 100%);
-          background-size: 200% 100%;
-          animation: shimmer 2s linear infinite;
-          border-radius: 6px;
-        }
-        .send-btn {
-          transition: background 0.15s ease, transform 0.15s ease;
-        }
-        .send-btn:hover {
-          transform: scale(1.08);
-          background: #e05a3a !important;
         }
         .pattern-hover-zone:hover .mashrabiya-overlay {
           opacity: 0.28 !important;
@@ -801,8 +780,31 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   )
 
   return (
-<div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-y-auto min-h-full">
-<section className="flex flex-1 flex-col rounded-xl border border-border bg-card lg:col-span-8">
+    <div className="grid grid-cols-1 gap-5 p-4 lg:grid-cols-12 lg:p-5 overflow-y-auto min-h-full">
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes chatPulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.08); }
+        }
+        .chat-shimmer {
+          background: linear-gradient(90deg, #ececf0 0%, #e0e0e8 50%, #ececf0 100%);
+          background-size: 200% 100%;
+          animation: shimmer 2s linear infinite;
+          border-radius: 6px;
+        }
+        .send-btn {
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .send-btn:hover {
+          transform: scale(1.08);
+          background: #e05a3a !important;
+        }
+      `}</style>
+      <section className="flex flex-1 flex-col rounded-xl border border-border bg-card lg:col-span-8">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3 bg-background shrink-0">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-1.5">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
