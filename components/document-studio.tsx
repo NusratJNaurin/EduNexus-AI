@@ -982,7 +982,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto p-3 min-h-0">
-            {activeDoc ? (
+            {messages.length > 0 ? (
               messages.map((message) => {
                 const messageIsArabic = isArabicText(message.text)
                 return (
