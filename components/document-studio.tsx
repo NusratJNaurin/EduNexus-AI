@@ -6,7 +6,7 @@ import { extractTextFromPdf } from "@/lib/pdfWorker"
 import {
   Search,
   FileText,
-  Highlighter,
+  Paperclip,
   Send,
   Sparkles,
   UploadCloud,
@@ -235,6 +235,7 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
+  const [focused, setFocused] = useState(false)
   const [documentText, setDocumentText] = useState("")
   const [documentSummary, setDocumentSummary] = useState("")
   const [loadingSummary, setLoadingSummary] = useState(false)
@@ -1006,9 +1007,22 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
                 )
               })
             ) : (
-              <p className="text-center text-xs text-muted-foreground italic pt-12">
-                Select or upload a document to activate the AI analysis.
-              </p>
+              <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
+                <div style={{ animation: "chatPulse 2.4s ease-in-out infinite" }}>
+                  <Sparkles size={18} style={{ color: "#e05a3a" }} />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-xs font-semibold" style={{ color: "#030213" }}>AI Analysis Ready</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "#717182" }}>
+                    Select or upload a document to activate the AI analysis.
+                  </p>
+                </div>
+                <div className="w-full space-y-2 mt-2">
+                  <div className="chat-shimmer h-7 w-4/5 ml-auto" style={{ borderRadius: "10px 10px 2px 10px" }} />
+                  <div className="chat-shimmer h-7 w-3/5" style={{ borderRadius: "10px 10px 10px 2px" }} />
+                  <div className="chat-shimmer h-7 w-2/3 ml-auto" style={{ borderRadius: "10px 10px 2px 10px" }} />
+                </div>
+              </div>
             )}
 
             {sendingChat && (
@@ -1061,23 +1075,33 @@ export function DocumentStudio({ onNodesUpdated }: DocumentStudioProps) {
             </div>
           )}
 
-          <form onSubmit={handleFormSubmit} className="flex items-center gap-2 border-t border-border p-2 bg-background">
-            <Highlighter className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <form
+            onSubmit={handleFormSubmit}
+            className="border-t flex items-center gap-2 px-3 py-2.5 transition-all"
+            style={{
+              borderColor: focused ? "rgba(224,90,58,0.3)" : "rgba(0,0,0,0.07)",
+              background: focused ? "rgba(224,90,58,0.03)" : "transparent",
+            }}
+          >
+            <Paperclip size={13} style={{ color: "#a0a0b0", cursor: "pointer", flexShrink: 0 }} />
             <input
               value={chatInput}
               disabled={!activeDoc || sendingChat}
               onChange={(e) => setChatInput(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               placeholder={activeDoc ? "Ask a question..." : "Upload a paper first"}
-              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:opacity-50 text-foreground"
+              className="flex-1 text-xs bg-transparent border-none outline-none disabled:opacity-50"
+              style={{ color: "#030213" }}
             />
-            <Button
+            <button
               type="submit"
-              size="icon"
               disabled={!activeDoc || !chatInput.trim() || sendingChat}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 h-7 w-7"
+              className="send-btn w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+              style={{ background: chatInput ? "#e05a3a" : "#ececf0" }}
             >
-              <Send className="size-3" />
-            </Button>
+              <Send size={10} style={{ color: chatInput ? "white" : "#a0a0b0" }} />
+            </button>
           </form>
         </div>
       </section>
