@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button"
 import {
   Mic,
   MicOff,
-  Radio,
-  CircleDot,
   FileText,
   Lightbulb,
   Layers,
@@ -142,6 +140,69 @@ function GraphEmptyState() {
   );
 }
 
+// ── Audio Pod ─────────────────────────────────────────────────────────────────
+function AudioPod({ micOn, onToggle }: { micOn: boolean; onToggle: () => void }) {
+  const barCount = 18;
+  return (
+    <div className="flex-shrink-0 flex flex-col overflow-hidden rounded-none"
+      style={{ background: "linear-gradient(175deg,#7b1d3a 0%,#5a0f28 70%,#3d0818 100%)", minHeight: 140, position: "relative" }}>
+      {/* subtle mashrabiya overlay */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: .1 }} xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="audioMash" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="12" cy="12" r="5" fill="none" stroke="white" strokeWidth=".6"/>
+            <line x1="12" y1="2" x2="12" y2="22" stroke="white" strokeWidth=".4"/>
+            <line x1="2" y1="12" x2="22" y2="12" stroke="white" strokeWidth=".4"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#audioMash)"/>
+      </svg>
+
+      <div className="relative z-10 flex items-center gap-1.5 px-3 pt-3 pb-2">
+        <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: "rgba(255,255,255,.15)" }}>
+          <Mic size={9} color="white"/>
+        </div>
+        <p className="font-semibold tracking-wider text-white" style={{ fontSize: 9, letterSpacing: ".08em" }}>SOCRATIC AUDIO · VIVA POD</p>
+      </div>
+
+      {/* Waveform */}
+      <div className="relative z-10 flex items-end justify-center gap-0.5 px-4 py-2" style={{ height: 52 }}>
+        {Array.from({ length: barCount }).map((_, i) => {
+          const delay = (i * 0.07).toFixed(2);
+          const height = micOn ? 8 + Math.sin(i * 0.8) * 14 : 4 + Math.sin(i * 0.5) * 6;
+          return (
+            <div key={i} className="rounded-full flex-shrink-0"
+              style={{
+                width: 3, height: `${height}px`,
+                background: `rgba(255,255,255,${micOn ? 0.75 : 0.35})`,
+                animation: `waveBar ${micOn ? 0.6 + i * 0.04 : 1.2 + i * 0.06}s ease-in-out infinite`,
+                animationDelay: `${delay}s`,
+                transformOrigin: "bottom",
+                transition: "background .3s",
+              }}/>
+          );
+        })}
+      </div>
+
+      {/* Mic button */}
+      <div className="relative z-10 flex items-center justify-center pb-3 gap-3">
+        <button onClick={onToggle}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold"
+          style={{
+            background: micOn ? "rgba(224,90,58,.9)" : "rgba(255,255,255,.15)",
+            color: "white",
+            border: "1px solid rgba(255,255,255,.2)",
+            transition: "background .2s,box-shadow .2s",
+            boxShadow: micOn ? "0 0 14px rgba(224,90,58,.5)" : "none",
+          }}>
+          {micOn ? <MicOff size={11}/> : <Mic size={11}/>}
+          {micOn ? "End defense" : "Select a node to begin defense"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Light grid canvas background ──────────────────────────────────────────────
 function GraphGridBackground() {
   return (
@@ -158,6 +219,10 @@ function GraphGridBackground() {
           @keyframes floatScholar {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-8px); }
+          }
+          @keyframes waveBar {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
           }
         `}</style>
         <pattern id="graphGrid" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
@@ -590,44 +655,17 @@ export function MethodologyGraph() {
           </section>
 
           <section className="flex flex-col gap-4 lg:col-span-4 overflow-y-auto">
-            <div className="rounded-xl border border-border bg-primary p-4 text-primary-foreground shadow-sm shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Radio className="size-4 text-accent" aria-hidden="true" />
-                  <p className="text-sm font-semibold">Socratic Audio · Viva Pod</p>
-                </div>
-                {selectedNode && (
-                  <span className="text-[10px] bg-primary-foreground/10 px-2 py-0.5 rounded-md text-primary-foreground/80 max-w-[150px] truncate">
-                    Target: {selectedNode.label}
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-col items-center gap-3">
-                <button
-                  type="button"
-                  disabled={!selectedNode}
-                  onClick={recording ? stopRecording : startRecording}
-                  className={`relative flex size-20 items-center justify-center rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                    recording
-                      ? "bg-accent text-accent-foreground shadow-lg"
-                      : "bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20"
-                  }`}
-                >
-                  {recording && <span className="absolute inline-flex size-20 animate-ping rounded-full bg-accent opacity-30" />}
-                  {recording ? <Mic className="size-8" /> : <MicOff className="size-8" />}
-                </button>
-
-                <div className="flex items-center gap-2 text-[11px] font-medium">
-                  <CircleDot className={`size-3.5 ${recording ? "text-accent animate-pulse" : "text-primary-foreground/40"}`} />
-                  {recording
-                    ? "Streaming Defense Audio · Live"
-                    : !selectedNode
-                      ? "Select a node to begin defense"
-                      : "Microphone Idle Context"}
-                </div>
-              </div>
-            </div>
+            <AudioPod
+              micOn={recording}
+              onToggle={() => {
+                if (!selectedNode) return
+                if (recording) {
+                  stopRecording()
+                } else {
+                  startRecording()
+                }
+              }}
+            />
 
             {selectedNode && (
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm shrink-0 transition-all animate-in fade-in duration-200">
