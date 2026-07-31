@@ -16,6 +16,7 @@ import {
   Loader2,
   X,
   Info,
+  Network,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
@@ -37,6 +38,140 @@ interface GraphNode {
 }
 
 type ForceNodeInput = { id: string; node_type: ConceptNodeType; x?: number; y?: number }
+
+// ── Illustrated empty state: researcher building a concept map ────────────────
+function GraphEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 select-none pointer-events-none">
+      {/* Animated skeleton graph nodes */}
+      <div className="relative" style={{ width: 260, height: 160 }}>
+        <svg width="260" height="160" viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg">
+          {/* Connecting dotted lines */}
+          <line x1="70" y1="50" x2="130" y2="80" stroke="#7b1d3a" strokeWidth="1.5"
+            strokeDasharray="5 4" strokeOpacity=".3" style={{ animation: "lineDash 1.8s linear infinite" }}/>
+          <line x1="130" y1="80" x2="190" y2="50" stroke="#7b1d3a" strokeWidth="1.5"
+            strokeDasharray="5 4" strokeOpacity=".3" style={{ animation: "lineDash 1.8s linear infinite .3s" }}/>
+          <line x1="130" y1="80" x2="130" y2="130" stroke="#7b1d3a" strokeWidth="1.5"
+            strokeDasharray="5 4" strokeOpacity=".3" style={{ animation: "lineDash 1.8s linear infinite .6s" }}/>
+          <line x1="70" y1="50" x2="40" y2="110" stroke="#7b1d3a" strokeWidth="1.5"
+            strokeDasharray="5 4" strokeOpacity=".2" style={{ animation: "lineDash 1.8s linear infinite .9s" }}/>
+          <line x1="190" y1="50" x2="220" y2="110" stroke="#7b1d3a" strokeWidth="1.5"
+            strokeDasharray="5 4" strokeOpacity=".2" style={{ animation: "lineDash 1.8s linear infinite 1.2s" }}/>
+
+          {/* Central node */}
+          <circle cx="130" cy="80" r="22" fill="#7b1d3a" fillOpacity=".12"
+            stroke="#7b1d3a" strokeWidth="1.5" strokeOpacity=".4"
+            style={{ animation: "nodePulse 2.4s ease-in-out infinite" }}/>
+          <circle cx="130" cy="80" r="13" fill="#7b1d3a" fillOpacity=".18"
+            style={{ animation: "nodePulse 2.4s ease-in-out infinite .2s" }}/>
+
+          {/* Left node */}
+          <circle cx="70" cy="50" r="16" fill="#3b82f6" fillOpacity=".1"
+            stroke="#3b82f6" strokeWidth="1.5" strokeOpacity=".35"
+            style={{ animation: "nodePulse 2.8s ease-in-out infinite .4s" }}/>
+          <circle cx="70" cy="50" r="9" fill="#3b82f6" fillOpacity=".15"
+            style={{ animation: "nodePulse 2.8s ease-in-out infinite .6s" }}/>
+
+          {/* Right node */}
+          <circle cx="190" cy="50" r="16" fill="#10b981" fillOpacity=".1"
+            stroke="#10b981" strokeWidth="1.5" strokeOpacity=".35"
+            style={{ animation: "nodePulse 3s ease-in-out infinite .8s" }}/>
+          <circle cx="190" cy="50" r="9" fill="#10b981" fillOpacity=".15"
+            style={{ animation: "nodePulse 3s ease-in-out infinite 1s" }}/>
+
+          {/* Bottom node */}
+          <circle cx="130" cy="130" r="14" fill="#8b5cf6" fillOpacity=".1"
+            stroke="#8b5cf6" strokeWidth="1.5" strokeOpacity=".35"
+            style={{ animation: "nodePulse 2.6s ease-in-out infinite 1.2s" }}/>
+          <circle cx="130" cy="130" r="8" fill="#8b5cf6" fillOpacity=".15"
+            style={{ animation: "nodePulse 2.6s ease-in-out infinite 1.4s" }}/>
+
+          {/* Far bottom-left */}
+          <circle cx="40" cy="110" r="11" fill="#e05a3a" fillOpacity=".1"
+            stroke="#e05a3a" strokeWidth="1.2" strokeOpacity=".3"
+            style={{ animation: "nodePulse 3.2s ease-in-out infinite 1.6s" }}/>
+
+          {/* Far bottom-right */}
+          <circle cx="220" cy="110" r="11" fill="#e05a3a" fillOpacity=".1"
+            stroke="#e05a3a" strokeWidth="1.2" strokeOpacity=".3"
+            style={{ animation: "nodePulse 3.2s ease-in-out infinite 1.8s" }}/>
+
+          {/* Labels */}
+          <text x="130" y="83" textAnchor="middle" fontSize="7" fill="#7b1d3a" fillOpacity=".6" fontWeight="600">
+            METHODOLOGY
+          </text>
+          <text x="70" y="53" textAnchor="middle" fontSize="6" fill="#3b82f6" fillOpacity=".7">STRUCTURE</text>
+          <text x="190" y="53" textAnchor="middle" fontSize="6" fill="#10b981" fillOpacity=".7">PREREQS</text>
+          <text x="130" y="133" textAnchor="middle" fontSize="6" fill="#8b5cf6" fillOpacity=".7">GAPS</text>
+        </svg>
+      </div>
+
+      {/* Researcher figure below */}
+      <div style={{ animation: "floatScholar 5s ease-in-out infinite" }}>
+        <svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">
+          {/* Body */}
+          <rect x="28" y="30" width="24" height="28" rx="10" fill="#7b1d3a" fillOpacity=".2"/>
+          {/* Head */}
+          <circle cx="40" cy="20" r="12" fill="#f5e6c8"/>
+          {/* Cap */}
+          <rect x="28" y="12" width="24" height="4" rx="1" fill="#7b1d3a"/>
+          <rect x="34" y="8" width="12" height="6" rx="1" fill="#7b1d3a"/>
+          <line x1="52" y1="12" x2="56" y2="20" stroke="#7b1d3a" strokeWidth="1.2"/>
+          <circle cx="56" cy="21" r="2" fill="#e05a3a"/>
+          {/* Face */}
+          <circle cx="36" cy="21" r="1.2" fill="#5a3020"/>
+          <circle cx="44" cy="21" r="1.2" fill="#5a3020"/>
+          <path d="M36 26 Q40 29 44 26" fill="none" stroke="#5a3020" strokeWidth="1" strokeLinecap="round"/>
+          {/* Extended arm pointing */}
+          <line x1="52" y1="38" x2="66" y2="28" stroke="#7b1d3a" strokeWidth="2" strokeLinecap="round"/>
+          <circle cx="67" cy="27" r="2.5" fill="#e05a3a" fillOpacity=".7"/>
+        </svg>
+      </div>
+
+      <div className="text-center space-y-1.5">
+        <p className="font-semibold text-sm" style={{ color: "#1a1a2e" }}>No methodology concept nodes processed.</p>
+        <p className="text-xs leading-relaxed max-w-[240px]" style={{ color: "#717182" }}>
+          Upload structural text assets to Document Interaction Studio to trigger model vector nodes.
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+        style={{ background: "rgba(123,29,58,.07)", color: "#7b1d3a" }}>
+        <Network size={11}/><span>Graph engine standing by</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Light grid canvas background ──────────────────────────────────────────────
+function GraphGridBackground() {
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: .35 }}>
+      <defs>
+        <style>{`
+          @keyframes lineDash {
+            to { stroke-dashoffset: -18; }
+          }
+          @keyframes nodePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.08); }
+          }
+          @keyframes floatScholar {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+        `}</style>
+        <pattern id="graphGrid" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+          <path d="M28 0 L0 0 0 28" fill="none" stroke="rgba(123,29,58,0.18)" strokeWidth=".5"/>
+        </pattern>
+        <pattern id="graphGridBig" x="0" y="0" width="112" height="112" patternUnits="userSpaceOnUse">
+          <rect width="112" height="112" fill="url(#graphGrid)"/>
+          <path d="M112 0 L0 0 0 112" fill="none" stroke="rgba(123,29,58,0.28)" strokeWidth=".8"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#graphGridBig)"/>
+    </svg>
+  );
+}
 
 export function MethodologyGraph() {
   const [nodes, setNodes] = useState<GraphNode[]>([])
@@ -362,17 +497,15 @@ export function MethodologyGraph() {
               </div>
             </div>
 
-            <div ref={canvasRef} className="relative flex-1 w-full bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px]">
+            <div ref={canvasRef} className="relative flex-1 w-full overflow-hidden">
+              <GraphGridBackground />
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground gap-2">
                   <Loader2 className="size-4 animate-spin text-primary" /> Compiling live relational database nodes...
                 </div>
               ) : nodes.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-muted-foreground text-xs">
-                  <p className="font-semibold">No methodology concept nodes processed.</p>
-                  <p className="max-w-xs mt-1 text-muted-foreground/70">
-                    Upload structural text assets to Document Interaction Studio to trigger model vector nodes.
-                  </p>
+                <div className="absolute inset-0">
+                  <GraphEmptyState />
                 </div>
               ) : (
                 <>
