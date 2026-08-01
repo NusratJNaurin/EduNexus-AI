@@ -155,7 +155,7 @@ export default function Page() {
           )}
 <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Subtle background texture — only visible in the white gaps between panels */}
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0.025 }} xmlns="http://www.w3.org/2000/svg">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0.05 }} xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <pattern id="workspaceMash" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
                   <circle cx="20" cy="20" r="8" fill="none" stroke="#8A1538" strokeWidth="1" />
