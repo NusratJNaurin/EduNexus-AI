@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BookOpen, Building, Clock, GraduationCap, Hash, User } from "lucide-react"
+import { BookOpen, Clock, GraduationCap, Hash, Sparkles, User } from "lucide-react"
 import { classSectionsCrud, profilesCrud, researchDocumentsCrud, sectionEnrollmentsCrud } from "@/lib/crud"
 import { supabase } from "@/lib/supabase"
 import type { ClassSectionRow, ProfileRow, ResearchDocumentRow, SectionEnrollmentRow } from "@/lib/types"
@@ -148,14 +148,134 @@ function SectionCard({
   )
 }
 
-function EmptyState({ onNavigate }: { onNavigate?: () => void }) {
+function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
-      <Building className="size-12 text-muted-foreground/40" aria-hidden="true" />
-      <h3 className="mt-4 text-lg font-semibold text-foreground">No sections yet</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        Use the invite code from your instructor to join a class section. Enter it in the sidebar panel.
-      </p>
+    <div className="flex flex-col items-center justify-center gap-6 rounded-xl border border-dashed border-border bg-card/50 px-6 py-12 text-center">
+      {/* ── Main illustration ── */}
+      <div className="relative" style={{ width: 260, height: 200 }}>
+
+        {/* Floating orbiting cards — left */}
+        <div className="absolute" style={{ left: 0, top: 32, animation: "floatPaper2 4s ease-in-out infinite" }}>
+          <svg width="64" height="76" viewBox="0 0 64 76" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="76" rx="6" fill="white" stroke="#7b1d3a" strokeWidth="1" strokeOpacity=".18"/>
+            <rect x="0" y="0" width="64" height="14" rx="6" fill="#7b1d3a" fillOpacity=".12"/>
+            <rect x="0" y="6" width="64" height="8" rx="0" fill="#7b1d3a" fillOpacity=".06"/>
+            <circle cx="10" cy="7" r="3" fill="#7b1d3a" fillOpacity=".3"/>
+            <line x1="8" y1="22" x2="56" y2="22" stroke="#7b1d3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="29" x2="50" y2="29" stroke="#7b1d3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="36" x2="54" y2="36" stroke="#7b1d3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="43" x2="46" y2="43" stroke="#7b1d3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <rect x="8" y="54" width="22" height="12" rx="3" fill="#3b82f6" fillOpacity=".2"/>
+            <text x="19" y="63" textAnchor="middle" fontSize="7" fill="#3b82f6" fillOpacity=".7" fontWeight="600">BIO</text>
+          </svg>
+        </div>
+
+        {/* Floating orbiting cards — right */}
+        <div className="absolute" style={{ right: 0, top: 20, animation: "floatPaper1 3.6s ease-in-out infinite .3s" }}>
+          <svg width="64" height="76" viewBox="0 0 64 76" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="76" rx="6" fill="white" stroke="#e05a3a" strokeWidth="1" strokeOpacity=".2"/>
+            <rect x="0" y="0" width="64" height="14" rx="6" fill="#e05a3a" fillOpacity=".12"/>
+            <rect x="0" y="6" width="64" height="8" fill="#e05a3a" fillOpacity=".05"/>
+            <circle cx="10" cy="7" r="3" fill="#e05a3a" fillOpacity=".35"/>
+            <line x1="8" y1="22" x2="56" y2="22" stroke="#e05a3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="29" x2="48" y2="29" stroke="#e05a3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="36" x2="52" y2="36" stroke="#e05a3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <line x1="8" y1="43" x2="44" y2="43" stroke="#e05a3a" strokeWidth=".7" strokeOpacity=".2"/>
+            <rect x="8" y="54" width="26" height="12" rx="3" fill="#e05a3a" fillOpacity=".18"/>
+            <text x="21" y="63" textAnchor="middle" fontSize="7" fill="#e05a3a" fillOpacity=".75" fontWeight="600">CHEM</text>
+          </svg>
+        </div>
+
+        {/* Central scholar + door scene */}
+        <div className="absolute" style={{ left: "50%", top: 10, transform: "translateX(-50%)", animation: "floatScholar 4.5s ease-in-out infinite" }}>
+          <svg width="100" height="170" viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg">
+
+            {/* Arched doorway / portal */}
+            <path d="M18 165 L18 80 Q18 44 50 44 Q82 44 82 80 L82 165 Z"
+              fill="none" stroke="#7b1d3a" strokeWidth="2" strokeOpacity=".15"/>
+            <path d="M24 165 L24 82 Q24 52 50 52 Q76 52 76 82 L76 165 Z"
+              fill="rgba(123,29,58,0.04)" stroke="#7b1d3a" strokeWidth="1" strokeOpacity=".1"/>
+            {/* Keystone */}
+            <path d="M42 46 L50 38 L58 46 Z" fill="#7b1d3a" fillOpacity=".2"/>
+            {/* Step */}
+            <rect x="10" y="160" width="80" height="6" rx="1" fill="#7b1d3a" fillOpacity=".1"/>
+
+            {/* Scholar body */}
+            <rect x="36" y="110" width="28" height="38" rx="10" fill="#7b1d3a" fillOpacity=".2"/>
+            {/* Gown/robe accent */}
+            <path d="M36 125 Q50 132 64 125 L64 148 Q50 142 36 148 Z" fill="#7b1d3a" fillOpacity=".08"/>
+
+            {/* Head */}
+            <circle cx="50" cy="100" r="14" fill="#f5e6c8"/>
+            {/* Graduation cap */}
+            <rect x="36" y="90" width="28" height="5" rx="1" fill="#7b1d3a"/>
+            <rect x="43" y="85" width="14" height="7" rx="1" fill="#7b1d3a"/>
+            <line x1="64" y1="90" x2="69" y2="100" stroke="#7b1d3a" strokeWidth="1.4"/>
+            <circle cx="69" cy="101" r="2.5" fill="#e05a3a"/>
+            {/* Face */}
+            <circle cx="45" cy="102" r="1.5" fill="#5a3020"/>
+            <circle cx="55" cy="102" r="1.5" fill="#5a3020"/>
+            <path d="M45 107 Q50 111 55 107" fill="none" stroke="#5a3020" strokeWidth="1.1" strokeLinecap="round"/>
+
+            {/* Key in hand */}
+            <line x1="64" y1="125" x2="78" y2="118" stroke="#7b1d3a" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="81" cy="116" r="4" fill="none" stroke="#e05a3a" strokeWidth="1.5" strokeOpacity=".7"/>
+            <line x1="81" y1="120" x2="81" y2="126" stroke="#e05a3a" strokeWidth="1.2" strokeLinecap="round"/>
+            <line x1="79" y1="123" x2="83" y2="123" stroke="#e05a3a" strokeWidth="1" strokeLinecap="round"/>
+
+            {/* Floating sparkles around scholar */}
+            <circle cx="22" cy="98" r="2" fill="#e05a3a" fillOpacity=".4"
+              style={{ animation:"nodePulse 2s ease-in-out infinite" }}/>
+            <circle cx="80" cy="88" r="1.5" fill="#3b82f6" fillOpacity=".5"
+              style={{ animation:"nodePulse 2.4s ease-in-out infinite .4s" }}/>
+            <circle cx="26" cy="115" r="1.2" fill="#10b981" fillOpacity=".5"
+              style={{ animation:"nodePulse 2.8s ease-in-out infinite .8s" }}/>
+          </svg>
+        </div>
+
+        {/* Dashed connector lines to the cards */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 260 200" xmlns="http://www.w3.org/2000/svg">
+          <line x1="74" y1="70" x2="120" y2="100" stroke="#7b1d3a" strokeWidth="1"
+            strokeDasharray="4 3" strokeOpacity=".18"
+            style={{ animation:"lineDash 2s linear infinite" }}/>
+          <line x1="186" y1="60" x2="145" y2="95" stroke="#e05a3a" strokeWidth="1"
+            strokeDasharray="4 3" strokeOpacity=".18"
+            style={{ animation:"lineDash 2s linear infinite .5s" }}/>
+        </svg>
+      </div>
+
+      {/* ── Text block ── */}
+      <div className="text-center space-y-2 max-w-xs">
+        <p className="font-bold text-sm" style={{ color: "#1a1a2e", letterSpacing: "-.01em" }}>
+          No sections yet
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: "#717182" }}>
+          Use the invite code from your instructor to join a class section. Enter it in the sidebar panel.
+        </p>
+      </div>
+
+      {/* ── Step hints ── */}
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+        {[
+          { n:"1", label:"Get an invite code from your instructor", color:"#3b82f6", bg:"rgba(59,130,246,.08)" },
+          { n:"2", label:"Enter it in the sidebar 'JOIN CLASS WITH CODE' panel", color:"#7b1d3a", bg:"rgba(123,29,58,.07)" },
+          { n:"3", label:"Your class materials appear here instantly", color:"#10b981", bg:"rgba(16,185,129,.08)" },
+        ].map(step => (
+          <div key={step.n} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl"
+            style={{ background: step.bg, border:`1px solid ${step.color}22` }}>
+            <span className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0 text-white"
+              style={{ background: step.color, fontSize: 10 }}>{step.n}</span>
+            <p className="text-xs" style={{ color: "#4a3a3a" }}>{step.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── CTA pill ── */}
+      <div className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold"
+        style={{ background:"rgba(123,29,58,.07)", color:"#7b1d3a", border:"1px solid rgba(123,29,58,.14)" }}>
+        <Sparkles size={11}/>
+        <span>Waiting to unlock your first section</span>
+      </div>
     </div>
   )
 }

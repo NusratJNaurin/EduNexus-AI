@@ -193,6 +193,27 @@
   }
 }
 
+/* Floating paper cards — left & right orbiting illustrations */
+@keyframes floatPaper1 {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes floatPaper2 {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 .login-input-wrap {
   position: relative;
 }
