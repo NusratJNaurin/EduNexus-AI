@@ -141,16 +141,18 @@ export default function Page() {
           />
         )}
 <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar
-            view={view}
-            authed={authed}
-            name={profileName || "Guest"}
-            onSignOut={async () => {
-              await supabase.auth.signOut()
-              resetWorkspaceState()
-              router.refresh()
-            }}
-          />
+          {authed && (
+            <Topbar
+              view={view}
+              authed={authed}
+              name={profileName || "Guest"}
+              onSignOut={async () => {
+                await supabase.auth.signOut()
+                resetWorkspaceState()
+                router.refresh()
+              }}
+            />
+          )}
 <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Subtle background texture — only visible in the white gaps between panels */}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0.025 }} xmlns="http://www.w3.org/2000/svg">
