@@ -200,7 +200,7 @@ export function Sidebar({
       >
         <defs>
           <clipPath id="quarterCircleTR">
-            <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
+            <path d="M 180 180 L 180 0 A 120 120 0 0 0 60 180 Z" />
           </clipPath>
           <pattern id="latticeTileTR" width="30" height="30" patternUnits="userSpaceOnUse">
             <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
@@ -291,7 +291,7 @@ export function Sidebar({
       >
         <defs>
           <clipPath id="quarterCircleBL">
-            <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
+            <path d="M 180 0 A 120 120 0 0 0 60 180 Z" />
           </clipPath>
           <pattern id="latticeTileBL" width="30" height="30" patternUnits="userSpaceOnUse">
             <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
