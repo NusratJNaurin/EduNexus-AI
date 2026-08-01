@@ -195,7 +195,7 @@ export function Sidebar({
         height="180"
         viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute right-0 top-[264px] origin-top -scale-y-100 opacity-[0.35]"        
+        className="pointer-events-none absolute right-0 top-[264px] opacity-[0.35]"
         aria-hidden="true"
       >
         <defs>
@@ -286,12 +286,12 @@ export function Sidebar({
         height="180"
         viewBox="0 0 180 180"
         xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute bottom-0 left-0 opacity-[0.35]"
+        className="pointer-events-none absolute bottom-0 left-0 rotate-180 opacity-[0.35]"
         aria-hidden="true"
       >
         <defs>
           <clipPath id="quarterCircleBL">
-            <path d="M 0 0 L 0 180 A 180 180 0 0 0 180 180 Z" />
+            <path d="M 180 180 L 180 0 A 180 180 0 0 0 0 180 Z" />
           </clipPath>
           <pattern id="latticeTileBL" width="30" height="30" patternUnits="userSpaceOnUse">
             <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
@@ -364,7 +364,7 @@ export function Sidebar({
           </pattern>
         </defs>
         <rect width="180" height="180" fill="url(#latticeTileBL)" clipPath="url(#quarterCircleBL)" />
-        <path d="M 0 0 A 180 180 0 0 1 180 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
+        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
         <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1" />
         <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1" />
         <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
