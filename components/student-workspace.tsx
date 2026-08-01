@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BookOpen, Building, CalendarDays, Clock, GraduationCap, Hash, User } from "lucide-react"
+import { BookOpen, Building, Clock, GraduationCap, Hash, User } from "lucide-react"
 import { classSectionsCrud, profilesCrud, researchDocumentsCrud, sectionEnrollmentsCrud } from "@/lib/crud"
 import { supabase } from "@/lib/supabase"
 import type { ClassSectionRow, ProfileRow, ResearchDocumentRow, SectionEnrollmentRow } from "@/lib/types"
@@ -26,10 +26,12 @@ function SectionCard({
   section,
   instructor,
   documents,
+  memberCount,
 }: {
   section: ClassSectionRow
   instructor: ProfileRow | null
   documents: ResearchDocumentRow[]
+  memberCount: number
 }) {
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
@@ -75,7 +77,7 @@ function SectionCard({
         {/* Stats row */}
         <div className="flex flex-wrap gap-2">
           <StatBadge label="Classwork" value={String(documents.length)} icon={BookOpen} />
-          <StatBadge label="Created" value={formatDate(section.created_at)} icon={CalendarDays} />
+          <StatBadge label="Members" value={String(memberCount)} icon={User} />
           <StatBadge label="Invite" value={section.invite_code} icon={Hash} />
         </div>
 
@@ -219,7 +221,8 @@ export function StudentWorkspace() {
       .map((section) => {
         const instructor = profiles.find((p) => p.id === section.instructor_id) ?? null
         const sectionDocs = documents.filter((d) => d.owner_id === section.instructor_id)
-        return { section, instructor, documents: sectionDocs }
+        const memberCount = enrollments.filter((e) => e.section_id === section.id).length
+        return { section, instructor, documents: sectionDocs, memberCount }
       })
   }, [userId, enrollments, sections, profiles, documents])
 
@@ -255,12 +258,13 @@ export function StudentWorkspace() {
         <EmptyState />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {enrolledSections.map(({ section, instructor, documents }) => (
+          {enrolledSections.map(({ section, instructor, documents, memberCount }) => (
             <SectionCard
               key={section.id}
               section={section}
               instructor={instructor}
               documents={documents}
+              memberCount={memberCount}
             />
           ))}
         </div>
