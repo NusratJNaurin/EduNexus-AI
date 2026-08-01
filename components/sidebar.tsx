@@ -190,6 +190,7 @@ export function Sidebar({
     <>
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       {/* Top-right mashrabiya lattice corner */}
+      {/* Commented out — mashrabiya lattice SVG
       <svg
         width="180"
         height="180"
@@ -279,8 +280,10 @@ export function Sidebar({
         <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
         <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
       </svg>
- 
+      */}
+
       {/* Bottom-left mashrabiya lattice corner */}
+      {/* Commented out — mashrabiya lattice SVG
       <svg
         width="180"
         height="180"
@@ -370,6 +373,7 @@ export function Sidebar({
         <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
         <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
       </svg>
+      */}
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
