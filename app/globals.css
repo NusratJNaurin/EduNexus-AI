@@ -240,3 +240,8 @@
 .signup-link:hover {
   text-decoration: underline;
 }
+
+/* ─── Sidebar mashrabiya hover effect ──────────────────────────────────── */
+.pattern-hover-zone:hover .mashrabiya-overlay {
+  opacity: 0.28 !important;
+}

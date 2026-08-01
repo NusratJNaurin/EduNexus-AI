@@ -21,6 +21,51 @@ import { sectionEnrollmentsCrud } from "@/lib/crud"
 import type { ClassSectionRow } from "@/lib/types"
 import { EditProfileDialog } from "@/components/edit-profile-dialog"
 
+// ─── Shared SVG components ────────────────────────────────────────────────────
+function MashrabiyaPattern({ opacity = 0.18, id = "mashrabiya" }: { opacity?: number; id?: string }) {
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none mashrabiya-overlay"
+      style={{ opacity, transition: "opacity .3s" }} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id={id} x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <circle cx="20" cy="20" r="8" fill="none" stroke="white" strokeWidth=".8" />
+          <circle cx="20" cy="20" r="4" fill="none" stroke="white" strokeWidth=".6" />
+          <line x1="20" y1="4" x2="20" y2="36" stroke="white" strokeWidth=".5" />
+          <line x1="4" y1="20" x2="36" y2="20" stroke="white" strokeWidth=".5" />
+          <line x1="8.7" y1="8.7" x2="31.3" y2="31.3" stroke="white" strokeWidth=".4" />
+          <line x1="31.3" y1="8.7" x2="8.7" y2="31.3" stroke="white" strokeWidth=".4" />
+          <rect x="15" y="0" width="10" height="4" rx="1" fill="white" fillOpacity=".3" />
+          <rect x="15" y="36" width="10" height="4" rx="1" fill="white" fillOpacity=".3" />
+          <rect x="0" y="15" width="4" height="10" rx="1" fill="white" fillOpacity=".3" />
+          <rect x="36" y="15" width="4" height="10" rx="1" fill="white" fillOpacity=".3" />
+          <circle cx="0" cy="0" r="2.5" fill="white" fillOpacity=".25" />
+          <circle cx="40" cy="0" r="2.5" fill="white" fillOpacity=".25" />
+          <circle cx="0" cy="40" r="2.5" fill="white" fillOpacity=".25" />
+          <circle cx="40" cy="40" r="2.5" fill="white" fillOpacity=".25" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${id})`} />
+    </svg>
+  );
+}
+
+function CornerAccent({ position }: { position: "top-right" | "bottom-left" }) {
+  const isTopRight = position === "top-right";
+  return (
+    <svg className="absolute pointer-events-none"
+      style={{ opacity: .35, ...(isTopRight ? { top: 0, right: 0 } : { bottom: 0, left: 0 }) }}
+      width="72" height="72" xmlns="http://www.w3.org/2000/svg">
+      <g transform={isTopRight ? "" : "rotate(180 36 36)"}>
+        <path d="M72 0 Q72 36 36 36 Q0 36 0 72" fill="none" stroke="white" strokeWidth="1.2" />
+        <path d="M72 0 Q72 24 48 24 Q24 24 24 48 Q24 72 0 72" fill="none" stroke="white" strokeWidth=".7" />
+        <circle cx="72" cy="0" r="4" fill="white" fillOpacity=".5" />
+        <circle cx="36" cy="36" r="3" fill="white" fillOpacity=".4" />
+        <circle cx="0" cy="72" r="4" fill="white" fillOpacity=".5" />
+      </g>
+    </svg>
+  );
+}
+
 export type ViewKey = "access" | "studio" | "graph" | "portal" | "sections"
 
 const NAV: {
@@ -186,244 +231,15 @@ export function Sidebar({
     }
   }, [])
 
-  // ─── Shared SVG components ────────────────────────────────────────────────────
-function MashrabiyaPattern({ opacity = 0.18, id = "mashrabiya" }: { opacity?: number; id?: string }) {
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none mashrabiya-overlay"
-      style={{ opacity, transition:"opacity .3s" }} xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id={id} x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-          <circle cx="20" cy="20" r="8" fill="none" stroke="white" strokeWidth=".8"/>
-          <circle cx="20" cy="20" r="4" fill="none" stroke="white" strokeWidth=".6"/>
-          <line x1="20" y1="4" x2="20" y2="36" stroke="white" strokeWidth=".5"/>
-          <line x1="4" y1="20" x2="36" y2="20" stroke="white" strokeWidth=".5"/>
-          <line x1="8.7" y1="8.7" x2="31.3" y2="31.3" stroke="white" strokeWidth=".4"/>
-          <line x1="31.3" y1="8.7" x2="8.7" y2="31.3" stroke="white" strokeWidth=".4"/>
-          <rect x="15" y="0" width="10" height="4" rx="1" fill="white" fillOpacity=".3"/>
-          <rect x="15" y="36" width="10" height="4" rx="1" fill="white" fillOpacity=".3"/>
-          <rect x="0" y="15" width="4" height="10" rx="1" fill="white" fillOpacity=".3"/>
-          <rect x="36" y="15" width="4" height="10" rx="1" fill="white" fillOpacity=".3"/>
-          <circle cx="0"  cy="0"  r="2.5" fill="white" fillOpacity=".25"/>
-          <circle cx="40" cy="0"  r="2.5" fill="white" fillOpacity=".25"/>
-          <circle cx="0"  cy="40" r="2.5" fill="white" fillOpacity=".25"/>
-          <circle cx="40" cy="40" r="2.5" fill="white" fillOpacity=".25"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${id})`}/>
-    </svg>
-  );
-}
-
-function CornerAccent({ position }: { position: "top-right" | "bottom-left" }) {
-  const isTopRight = position === "top-right";
-  return (
-    <svg className="absolute pointer-events-none"
-      style={{ opacity:.35, ...(isTopRight?{top:0,right:0}:{bottom:0,left:0}) }}
-      width="72" height="72" xmlns="http://www.w3.org/2000/svg">
-      <g transform={isTopRight?"":"rotate(180 36 36)"}>
-        <path d="M72 0 Q72 36 36 36 Q0 36 0 72" fill="none" stroke="white" strokeWidth="1.2"/>
-        <path d="M72 0 Q72 24 48 24 Q24 24 24 48 Q24 72 0 72" fill="none" stroke="white" strokeWidth=".7"/>
-        <circle cx="72" cy="0" r="4" fill="white" fillOpacity=".5"/>
-        <circle cx="36" cy="36" r="3" fill="white" fillOpacity=".4"/>
-        <circle cx="0"  cy="72" r="4" fill="white" fillOpacity=".5"/>
-      </g>
-    </svg>
-  );
-}
-
-  return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-      {/* Top-right mashrabiya lattice corner */}
-      {/* Commented out — mashrabiya lattice SVG
-      <svg
-        width="180"
-        height="180"
-        viewBox="0 0 180 180"
-        xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute right-0 top-[264px] opacity-[0.35]"
-        aria-hidden="true"
-      >
-        <defs>
-          <clipPath id="quarterCircleTR">
-            <path d="M 180 180 L 180 0 A 120 120 0 0 0 60 180 Z" />
-          </clipPath>
-          <pattern id="latticeTileTR" width="30" height="30" patternUnits="userSpaceOnUse">
-            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
-            <rect
-              x="7.5"
-              y="7.5"
-              width="15"
-              height="15"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.8"
-              transform="rotate(45 15 15)"
-            />
-            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="15" y1="0" x2="15" y2="30" stroke="#C5A059" strokeWidth="0.4" />
-            <line x1="0" y1="15" x2="30" y2="15" stroke="#C5A059" strokeWidth="0.4" />
-            <line x1="0" y1="7.5" x2="7.5" y2="0" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="22.5" y1="0" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="0" y1="22.5" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="22.5" y1="30" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.5" />
-            <rect
-              x="3.75"
-              y="3.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 7.5 7.5)"
-            />
-            <rect
-              x="18.75"
-              y="3.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 22.5 7.5)"
-            />
-            <rect
-              x="3.75"
-              y="18.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 7.5 22.5)"
-            />
-            <rect
-              x="18.75"
-              y="18.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 22.5 22.5)"
-            />
-            <line x1="7.5" y1="0" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="22.5" y1="0" x2="22.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="0" y1="7.5" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="0" y1="22.5" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="3.75" y1="0" x2="3.75" y2="30" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="26.25" y1="0" x2="26.25" y2="30" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="0" y1="3.75" x2="30" y2="3.75" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="0" y1="26.25" x2="30" y2="26.25" stroke="#C5A059" strokeWidth="0.25" />
-          </pattern>
-        </defs>
-        <rect width="180" height="180" fill="url(#latticeTileTR)" clipPath="url(#quarterCircleTR)" />
-        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
-        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
-      </svg>
-      */}
-
-      {/* Bottom-left mashrabiya lattice corner */}
-      {/* Commented out — mashrabiya lattice SVG
-      <svg
-        width="180"
-        height="180"
-        viewBox="0 0 180 180"
-        xmlns="http://www.w3.org/2000/svg"
-        className="pointer-events-none absolute bottom-0 left-0 rotate-180 opacity-[0.35]"
-        aria-hidden="true"
-      >
-        <defs>
-          <clipPath id="quarterCircleBL">
-            <path d="M 180 0 A 120 120 0 0 0 60 180 Z" />
-          </clipPath>
-          <pattern id="latticeTileBL" width="30" height="30" patternUnits="userSpaceOnUse">
-            <rect width="30" height="30" fill="none" stroke="#C5A059" strokeWidth="1" />
-            <rect
-              x="7.5"
-              y="7.5"
-              width="15"
-              height="15"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.8"
-              transform="rotate(45 15 15)"
-            />
-            <line x1="0" y1="0" x2="30" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="30" y1="0" x2="0" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="15" y1="0" x2="15" y2="30" stroke="#C5A059" strokeWidth="0.4" />
-            <line x1="0" y1="15" x2="30" y2="15" stroke="#C5A059" strokeWidth="0.4" />
-            <line x1="0" y1="7.5" x2="7.5" y2="0" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="22.5" y1="0" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="0" y1="22.5" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.5" />
-            <line x1="22.5" y1="30" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.5" />
-            <rect
-              x="3.75"
-              y="3.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 7.5 7.5)"
-            />
-            <rect
-              x="18.75"
-              y="3.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 22.5 7.5)"
-            />
-            <rect
-              x="3.75"
-              y="18.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 7.5 22.5)"
-            />
-            <rect
-              x="18.75"
-              y="18.75"
-              width="7.5"
-              height="7.5"
-              fill="none"
-              stroke="#C5A059"
-              strokeWidth="0.6"
-              transform="rotate(45 22.5 22.5)"
-            />
-            <line x1="7.5" y1="0" x2="7.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="22.5" y1="0" x2="22.5" y2="30" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="0" y1="7.5" x2="30" y2="7.5" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="0" y1="22.5" x2="30" y2="22.5" stroke="#C5A059" strokeWidth="0.3" />
-            <line x1="3.75" y1="0" x2="3.75" y2="30" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="26.25" y1="0" x2="26.25" y2="30" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="0" y1="3.75" x2="30" y2="3.75" stroke="#C5A059" strokeWidth="0.25" />
-            <line x1="0" y1="26.25" x2="30" y2="26.25" stroke="#C5A059" strokeWidth="0.25" />
-          </pattern>
-        </defs>
-        <rect width="180" height="180" fill="url(#latticeTileBL)" clipPath="url(#quarterCircleBL)" />
-        <path d="M 180 0 A 180 180 0 0 0 0 180" fill="none" stroke="#C5A059" strokeWidth="1.5" />
-        <line x1="150" y1="0" x2="150" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="120" y1="0" x2="120" y2="8" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="150" x2="172" y2="150" stroke="#C5A059" strokeWidth="1" />
-        <line x1="180" y1="120" x2="172" y2="120" stroke="#C5A059" strokeWidth="1" />
-      </svg>
-      */}
-
-      <aside className="pattern-hover-zone relative flex flex-col flex-shrink-0 overflow-hidden"
-      style={{ width:288, background:"linear-gradient(175deg,#7b1d3a 0%,#5a0f28 60%,#3d0818 100%)" }}>
-      <MashrabiyaPattern opacity={0.18} id="mash-sidebar"/>
-      <CornerAccent position="top-right"/>
-      <CornerAccent position="bottom-left"/>
+    <>
+    <aside
+      className="pattern-hover-zone sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground md:flex"
+      style={{ background: "linear-gradient(175deg,#7b1d3a 0%,#5a0f28 60%,#3d0818 100%)" }}
+    >
+      <MashrabiyaPattern opacity={0.18} id="mash-sidebar" />
+      <CornerAccent position="top-right" />
+      <CornerAccent position="bottom-left" />
 
       <div className="relative z-10 flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -575,6 +391,6 @@ function CornerAccent({ position }: { position: "top-right" | "bottom-left" }) {
           onProfileUpdated?.()
         }}
       />
-    </aside>
+    </>
   )
 }
