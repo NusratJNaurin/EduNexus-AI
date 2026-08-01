@@ -32,6 +32,28 @@ export default function Page() {
     setView("access")
   }
 
+  const refreshProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle()
+
+        if (profile) {
+          const parsed = profile as ProfileRow
+          setProfileId(parsed.id)
+          setProfileName(parsed.full_name)
+          setProfileRole(normalizeRole(parsed.role) || "student")
+        }
+      }
+    } catch {
+      // Non-critical; profile state remains unchanged
+    }
+  }
+
   useEffect(() => {
     let isMounted = true
     let authSubscription: { unsubscribe: () => void } | null = null
@@ -138,6 +160,7 @@ export default function Page() {
             canAccessPortal={isFaculty}
             name={profileName}
             role={profileRole}
+            onProfileUpdated={refreshProfile}
           />
         )}
 <div className="flex min-w-0 flex-1 flex-col">
@@ -165,7 +188,7 @@ export default function Page() {
               </defs>
               <rect width="100%" height="100%" fill="url(#workspaceMash)" />
             </svg>
-            <div key={view} className="relative z-10 flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div key={view} className="relative z-10 flex min-h-0 flex-1 flex-col" style={{ animation: "fadeIn 0.35s ease" }}>
           {view === "access" && (
             <AccessGate
               onAuthed={async (role: UserRole) => {

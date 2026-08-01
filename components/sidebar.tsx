@@ -43,6 +43,7 @@ export function Sidebar({
   canAccessPortal,
   name,
   role,
+  onProfileUpdated,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
@@ -50,6 +51,7 @@ export function Sidebar({
   canAccessPortal: boolean
   name?: string | null
   role?: string | null
+  onProfileUpdated?: () => void
 }) {
   // Role-based navigation filtering:
   // Students    → sections, studio, graph (NOT portal)
@@ -82,6 +84,7 @@ export function Sidebar({
   const [joining, setJoining] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [profileDomain, setProfileDomain] = useState<string | null>(null)
 
@@ -164,21 +167,27 @@ export function Sidebar({
   }, [inviteCode])
 
   const handleOpenEditProfile = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setEditLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("academic_domain")
-      .eq("id", user.id)
-      .maybeSingle()
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("academic_domain")
+        .eq("id", user.id)
+        .maybeSingle()
 
-    setProfileUserId(user.id)
-    setProfileDomain(profile?.academic_domain ?? null)
-    setEditProfileOpen(true)
+      setProfileUserId(user.id)
+      setProfileDomain(profile?.academic_domain ?? null)
+      setEditProfileOpen(true)
+    } finally {
+      setEditLoading(false)
+    }
   }, [])
 
   return (
+    <>
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
       {/* Top-right mashrabiya lattice corner */}
       <svg
@@ -489,15 +498,17 @@ export function Sidebar({
             <button
               type="button"
               onClick={handleOpenEditProfile}
-              className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              disabled={editLoading}
+              className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors disabled:opacity-50"
               aria-label="Edit profile"
             >
-              <Pencil className="size-3.5" />
+              {editLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}
             </button>
           )}
         </div>
       </div>
 
+      </aside>
       <EditProfileDialog
         open={editProfileOpen}
         onClose={() => setEditProfileOpen(false)}
@@ -506,10 +517,10 @@ export function Sidebar({
         initialRole={role ?? null}
         initialDomain={profileDomain}
         onProfileUpdated={() => {
-          // Profile updated — parent will re-fetch on next render
           setEditProfileOpen(false)
+          onProfileUpdated?.()
         }}
       />
-    </aside>
+    </>
   )
 }
