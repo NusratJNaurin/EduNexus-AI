@@ -131,3 +131,80 @@
     @apply font-sans;
   }
 }
+
+/* ─── Login page custom animations & classes ─────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lineDash {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes rippleOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(22);
+    opacity: 0;
+  }
+}
+
+.login-input-wrap {
+  position: relative;
+}
+
+.enter-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(138, 21, 56, 0.35);
+}
+
+.enter-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(138, 21, 56, 0.3);
+}
+
+.signup-link {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
