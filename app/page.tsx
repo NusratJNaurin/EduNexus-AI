@@ -151,8 +151,19 @@ export default function Page() {
               router.refresh()
             }}
           />
-<main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <div key={view} className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
+<main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {/* Subtle background texture — only visible in the white gaps between panels */}
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 0.025 }} xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="workspaceMash" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="20" cy="20" r="8" fill="none" stroke="#8A1538" strokeWidth="1" />
+                  <line x1="20" y1="4" x2="20" y2="36" stroke="#8A1538" strokeWidth="0.6" />
+                  <line x1="4" y1="20" x2="36" y2="20" stroke="#8A1538" strokeWidth="0.6" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#workspaceMash)" />
+            </svg>
+            <div key={view} className="relative z-10 flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
           {view === "access" && (
             <AccessGate
               onAuthed={async (role: UserRole) => {

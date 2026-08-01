@@ -520,13 +520,6 @@ export function AccessGate({ onAuthed }: { onAuthed: (role: AuthRole) => void })
             </div>
           </div>
 
-          {/* Auth badge */}
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center" style={{ background: "rgba(34,197,94,0.15)" }}>
-              <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e" }} />
-            </div>
-            <p style={{ color: "#a0a0b0", fontSize: 10 }}>Authentication / Universal Access Gate</p>
-          </div>
         </div>
       </div>
     </div>
