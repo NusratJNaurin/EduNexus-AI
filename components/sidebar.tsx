@@ -237,7 +237,7 @@ export function Sidebar({
       className="pattern-hover-zone sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border text-sidebar-foreground md:flex"
       style={{ background: "linear-gradient(175deg,#7b1d3a 0%,#5a0f28 60%,#3d0818 100%)" }}
     >
-      <MashrabiyaPattern opacity={0.18} id="mash-sidebar" />
+      <MashrabiyaPattern opacity={0.07} id="mash-sidebar" />
       <CornerAccent position="top-right" />
       <CornerAccent position="bottom-left" />
 
