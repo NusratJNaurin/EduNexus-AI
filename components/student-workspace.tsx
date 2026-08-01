@@ -112,8 +112,33 @@ function SectionCard({
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3 text-center text-xs text-muted-foreground">
-            No classwork materials have been shared yet.
+          <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary/15 bg-primary/[0.02] py-8">
+            {/* Classwork empty state */}
+            <div style={{ animation: "floatScholar 5s ease-in-out infinite" }}>
+              <svg
+                width="64"
+                height="56"
+                viewBox="0 0 64 56"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-primary"
+              >
+                <rect x="8" y="14" width="20" height="26" rx="2" fill="var(--card)" stroke="currentColor" strokeWidth="1" strokeOpacity=".3" />
+                <rect x="22" y="10" width="20" height="26" rx="2" fill="var(--card)" stroke="currentColor" strokeWidth="1" strokeOpacity=".4" />
+                <rect x="36" y="16" width="20" height="26" rx="2" fill="var(--card)" stroke="var(--accent)" strokeWidth="1" strokeOpacity=".35" />
+                <line x1="26" y1="18" x2="38" y2="18" stroke="currentColor" strokeWidth=".8" strokeOpacity=".3" />
+                <line x1="26" y1="22" x2="36" y2="22" stroke="currentColor" strokeWidth=".8" strokeOpacity=".3" />
+                <line x1="26" y1="26" x2="38" y2="26" stroke="currentColor" strokeWidth=".8" strokeOpacity=".3" />
+                <circle cx="32" cy="46" r="6" fill="currentColor" fillOpacity=".08" stroke="currentColor" strokeWidth=".8" strokeOpacity=".3" />
+                <line x1="32" y1="43" x2="32" y2="49" stroke="currentColor" strokeWidth="1.2" strokeOpacity=".4" strokeLinecap="round" />
+                <line x1="29" y1="46" x2="35" y2="46" stroke="currentColor" strokeWidth="1.2" strokeOpacity=".4" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold text-foreground">No classwork yet</p>
+              <p className="text-muted-foreground" style={{ fontSize: 10, marginTop: 2 }}>
+                No classwork materials have been shared yet.
+              </p>
+            </div>
           </div>
         )}
       </div>
