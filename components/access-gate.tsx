@@ -58,7 +58,7 @@ function LoginNetworkViz() {
           stroke="rgba(255,255,255,0.15)"
           strokeWidth="1"
           strokeDasharray="4 3"
-          style={{ animation: `lineDash ${2 + i * 0.15}s linear infinite`, animationDelay: `${i * 0.1}s` }}
+          style={{ animation: `lineDash ${3 + i * 0.22}s linear infinite`, animationDelay: `${i * 0.1}s` }}
         />
       ))}
       {nodes.map((n, i) => (
@@ -68,14 +68,14 @@ function LoginNetworkViz() {
             cy={n.cy}
             r={n.r * 2.5}
             fill="rgba(255,255,255,0.06)"
-            style={{ animation: `nodePulse ${2.5 + i * 0.2}s ease-in-out infinite`, animationDelay: `${n.delay}s` }}
+            style={{ animation: `nodePulse ${3.75 + i * 0.3}s ease-in-out infinite`, animationDelay: `${n.delay}s` }}
           />
           <circle
             cx={n.cx}
             cy={n.cy}
             r={n.r}
             fill="rgba(255,255,255,0.55)"
-            style={{ animation: `nodePulse ${2 + i * 0.15}s ease-in-out infinite`, animationDelay: `${n.delay + 0.2}s` }}
+            style={{ animation: `nodePulse ${3 + i * 0.22}s ease-in-out infinite`, animationDelay: `${n.delay + 0.2}s` }}
           />
         </g>
       ))}
