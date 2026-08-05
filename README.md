@@ -2,7 +2,8 @@
 
 > An intelligent, collaborative academic workspace and research sandbox that turns dense research papers into navigable, conversational, and measurable knowledge.
 
-**EduNexus AI** is built for Qatar University researchers, students, and faculty. Instead of scrolling through static PDFs, users interact with uploaded papers through visual knowledge maps, precision metric dashboards, and a source-grounded AI companion designed to reduce hallucinations. The platform includes a Socratic **Viva Pod** oral-defense simulator for students and a **Teacher Evaluation Portal** for cohort analytics and reporting.
+**EduNexus AI** is a collaborative research platform designed for Qatar University's academic community — students, researchers, and faculty — to transform dense academic papers into an interactive knowledge space.
+Understanding complex material becomes easier when you can visualize how ideas relate to one another. With that in mind, we built a workspace where users can upload research documents, automatically map prerequisite relationships between concepts, generate concise AI summaries, and identify open research gaps. A document-grounded AI assistant answers questions using only the uploaded content, and can even explain how different papers connect to each other. The platform natively supports Arabic PDFs — summaries and chat responses automatically switch language based on the document or the user's query. Beyond exploration, EduNexus AI helps students sharpen their critical thinking through the **Socratic Viva Pod**, an oral-defense simulator that records responses and evaluates them against structured rubrics. For instructors, the **Teacher Evaluation Portal** provides visibility into each student's reading activity and engagement, with exportable reports for data-driven assessment.
 
 ---
 
@@ -21,16 +22,13 @@
 
 ## Core Features
 
-- **Visual Methodology Mapping** — Upload research PDFs and render them as interactive relational graphs. Concept nodes represent papers, prerequisites, and research gaps, with draggable canvas positioning and edge relationships stored in Supabase.
-- **Precision Metric Isolation** — Automatically extracts and surfaces key document metrics including readability scores, complexity ratings, file size, page count, keyword tags, and confidence indicators in a compact metric matrix.
+- **Visual Methodology Mapping** — Upload research PDFs and render them as interactive relational graphs. Concept nodes represent papers, prerequisites, and research gaps, with draggable canvas positioning, a one-click **Auto-Layout** control, and edge relationships stored in Supabase. Manually placed nodes lock in place so the layout engine never snaps them back.
 - **Source-Grounded Chat** — An interactive Q&A assistant anchored to the active document. Queries are sent to a Gemini-powered `/api/chat` route with strict system instructions to confine answers to the uploaded text and reduce AI hallucinations. Supports Arabic: if the user asks in Arabic, Gemini responds in Arabic; for short ambiguous queries, the document language is used as a fallback.
 - **AI Document Summarization** — On upload, extracted text is summarized via `/api/summarize` to produce a concise 1–2 sentence overview of the paper's core topic and structural pillars. Automatically detects Arabic documents and generates summaries in Arabic.
 - **Arabic PDF Support** — Uploaded Arabic-language PDFs are fully supported. Text extraction, AI summarization, and source-grounded chat all detect Arabic content via a Unicode heuristic and respond in the appropriate language. Chat bubbles with Arabic text are right-aligned for correct RTL rendering.
 - **Automated Dependency Inference** — On upload, the platform automatically analyzes a new document against existing documents to infer prerequisite, research-gap, and citation relationships via `/api/analyze-dependencies` and `/api/infer-dependencies`, populating the methodology graph with structured edges.
-- **PDF Visual Viewer** — In-browser PDF rendering with `react-pdf` and `pdfjs-dist`, plus client-side text extraction for downstream AI and analytics pipelines.
 - **Socratic Viva Pod (Student)** — Record oral-defense responses against selected concept nodes. Audio is transcribed and evaluated by Gemini via `/api/viva`, with feedback logs persisted per node.
 - **Teacher Evaluation Portal (Faculty)** — Invite-only class sections, engagement timelines, completion metrics, student roster tracking, and export controls for CSV performance matrices and JSON audit trails.
-- **Role-Based Access Control** — Qatar University email verification (`@qu.edu.qa` / `@student.qu.edu.qa`), with distinct workspaces for **Student**, **Researcher**, and **Faculty** profiles enforced by Supabase Row-Level Security.
 
 ---
 
@@ -58,7 +56,7 @@
 | **Framework** | [Next.js 16](https://nextjs.org/) (App Router) with [React 19](https://react.dev/) |
 | **Language** | TypeScript |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) — maroon & gold semantic design tokens |
-| **UI Components** | [shadcn/ui](https://ui.shadcn.com/) + [Lucide React](https://lucide.dev/) icons |
+| **UI Components** | [shadcn/ui](https://ui.shadcn.com/) + [Base UI](https://base-ui.com/) primitives + [Lucide React](https://lucide.dev/) icons |
 | **Fonts** | Geist Sans & Geist Mono (`next/font`) |
 | **Database** | [Supabase](https://supabase.com/) (PostgreSQL) with Row-Level Security |
 | **Auth** | Supabase Auth (QU email domain restriction) |
@@ -66,6 +64,9 @@
 | **AI** | [Google Gemini 2.5 Flash](https://ai.google.dev/) via `@google/genai` |
 | **PDF Processing** | `react-pdf`, `pdfjs-dist` |
 | **Math Rendering** | KaTeX / `react-katex` |
+| **Graph Layout** | Custom layered (Sugiyama-style) engine — grid-aligned, crossing-minimized node positioning |
+| **Validation** | [`Zod`](https://zod.dev/) — API request payload validation |
+| **Notifications** | [`Sonner`](https://sonner.emilkowal.ski/) — toast notifications |
 | **Analytics** | [Vercel Analytics](https://vercel.com/analytics) (production only) |
 | **Deployment** | [Vercel](https://vercel.com/) |
 
@@ -77,9 +78,13 @@
 EduNexus-AI-Layout/
 ├── app/                              # Next.js App Router (root)
 │   ├── api/                          # API route handlers
+│   │   ├── analyze-dependencies/route.ts  # POST — Document dependency analysis
 │   │   ├── chat/route.ts             # POST — Source-grounded document Q&A via Gemini
+│   │   ├── infer-dependencies/route.ts    # POST — Dependency edge inference
 │   │   ├── summarize/route.ts        # POST — AI document summarization
 │   │   └── viva/route.ts             # POST — Viva Pod audio transcription & evaluation
+│   ├── auth/                         # Auth-related routes
+│   │   └── faculty-pending/          # Faculty pending approval page (placeholder)
 │   ├── globals.css                   # Tailwind v4 theme tokens & global styles
 │   ├── layout.tsx                    # Root layout, fonts, Vercel Analytics provider
 │   └── page.tsx                      # Main shell — auth state, routing, view switching
@@ -87,20 +92,16 @@ EduNexus-AI-Layout/
 ├── components/                       # React components (feature + UI)
 │   ├── access-gate.tsx               # QU email sign-up / sign-in form
 │   ├── document-studio.tsx           # PDF upload, metrics display, chat studio
+│   ├── edit-profile-dialog.tsx       # Modal for editing user profile information
 │   ├── methodology-graph.tsx         # Interactive concept graph + Viva Pod simulator
-│   ├── teacher-portal.tsx            # Faculty analytics dashboard & export controls
 │   ├── PdfVisualViewer.tsx           # In-browser PDF renderer (react-pdf/pdfjs-dist)
 │   ├── sidebar.tsx                   # Role-aware navigation sidebar
+│   ├── student-workspace.tsx         # Student/researcher layout & view orchestration
+│   ├── teacher-portal.tsx            # Faculty analytics dashboard & export controls
 │   ├── topbar.tsx                    # Workspace header with user menu
-│   └── ui/                           # shadcn/ui primitive components
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── dialog.tsx
-│       ├── input.tsx
-│       ├── label.tsx
-│       ├── select.tsx
-│       ├── table.tsx
-│       └── ... (other primitives)
+│   └── ui/                           # shadcn/ui primitive components (Base UI)
+│       ├── button.tsx                # Button component with variants
+│       └── tooltip.tsx              # Tooltip component
 │
 ├── hooks/                            # Custom React hooks
 │   └── use-api.ts                    # API request hook with loading/error states
@@ -108,21 +109,24 @@ EduNexus-AI-Layout/
 ├── lib/                              # Core utilities, clients, and business logic
 │   ├── api-client.ts                 # Typed Supabase client wrapper
 │   ├── crud.ts                       # Supabase CRUD helper functions
+│   ├── force-layout.ts               # Deterministic layered graph layout (grid-aligned, crossing-minimized)
 │   ├── pdfWorker.ts                  # Client-side PDF text extraction worker
 │   ├── supabase.ts                   # Browser Supabase client initialization
 │   ├── utils.ts                      # Tailwind class merging (cn utility)
 │   ├── utils_clients.ts              # SSR-safe Supabase client (browser)
 │   ├── utils_server.ts               # SSR-safe Supabase client (server)
 │   ├── utils_middleware.ts           # Middleware Supabase client
-│   └── api/                          # AI/API integration modules
-│       ├── gemini.ts                 # Google Gemini client & prompt templates
-│       └── validation.ts             # Input validation schemas
-│
-├── lib/types/                        # TypeScript type definitions
-│   └── index.ts                      # Shared interfaces (User, Document, Node, etc.)
+│   ├── api/                          # AI/API integration modules
+│   │   ├── gemini.ts                 # Google Gemini client & prompt templates
+│   │   ├── response.ts               # Standardized API response helpers
+│   │   └── validation.ts             # Input validation schemas (Zod)
+│   └── types/                        # TypeScript type definitions
+│       └── index.ts                  # Shared interfaces (User, Document, Node, etc.)
 │
 ├── scripts/                          # Database & migration scripts
-│   └── 001_edunexus_schema.sql       # Full Supabase schema, RLS policies, triggers
+│   ├── 001_edunexus_schema.sql       # Full Supabase schema, RLS policies, triggers
+│   ├── 002_knowledge_dependency_schema.sql  # Knowledge dependency tracking schema
+│   └── fix_enforce_qu_email_domain.sql      # QU email domain enforcement migration
 │
 ├── public/                           # Static assets
 │   ├── apple-icon.png
@@ -163,6 +167,9 @@ The root application directory using Next.js 16 App Router conventions.
 | `app/api/chat/route.ts` | Handles POST requests for document-grounded Q&A. Receives user query + document context, constructs a Gemini prompt with strict source constraints, and returns the AI response. |
 | `app/api/summarize/route.ts` | Accepts extracted PDF text, sends to Gemini for academic summarization, returns a 1–2 sentence overview. |
 | `app/api/viva/route.ts` | Accepts multipart form data (audio blob + concept node ID), transcribes via Gemini, evaluates the response against rubric criteria, and persists feedback. |
+| `app/api/analyze-dependencies/route.ts` | Analyzes a newly uploaded document against existing concept nodes to identify prerequisite, research-gap, and citation relationships. |
+| `app/api/infer-dependencies/route.ts` | Infers dependency edges from prerequisite concepts extracted during summarization, creating edges between the new document and existing nodes. |
+| `app/auth/faculty-pending/` | Placeholder route for faculty members pending approval (currently empty). |
 | `app/globals.css` | Tailwind v4 `@theme` blocks defining maroon/gold semantic tokens, CSS custom properties, and base resets. |
 | `app/layout.tsx` | Root layout wrapping all pages. Imports Geist Sans/Mono fonts, renders `Topbar` and `Sidebar`, and injects Vercel Analytics in production. |
 | `app/page.tsx` | Main application shell. Manages auth state via Supabase, handles view routing (Document Studio / Methodology Graph / Teacher Portal), and conditionally renders feature components based on user role. |
@@ -176,7 +183,7 @@ The root application directory using Next.js 16 App Router conventions.
 | `access-gate.tsx` | Authentication gate. Renders sign-up/sign-in forms with QU email domain validation (`@qu.edu.qa`, `@student.qu.edu.qa`). Handles role selection (Student, Faculty, Researcher) during registration. |
 | `document-studio.tsx` | Primary student/researcher workspace. Manages PDF upload flow, displays extracted metrics (readability, complexity, page count), renders AI summary, and hosts the source-grounded chat interface. |
 | `edit-profile-dialog.tsx` | Modal dialog for editing user profile information (full name, academic domain, avatar). |
-| `methodology-graph.tsx` | Interactive concept graph workspace. Renders draggable nodes (papers, prerequisites, research gaps) with edge relationships. Integrates Viva Pod for oral-defense practice on selected nodes. |
+| `methodology-graph.tsx` | Interactive concept graph workspace. Renders draggable nodes (papers, prerequisites, research gaps) with edge relationships, an Auto-Layout control, and persisted position lock-in. Integrates Viva Pod for oral-defense practice on selected nodes. |
 | `student-workspace.tsx` | Top-level student/researcher layout component that orchestrates the Document Studio and Methodology Graph views with role-based routing. |
 | `teacher-portal.tsx` | Faculty-only dashboard. Displays class sections, student engagement timelines, document activity metrics, and provides CSV/JSON export functionality. |
 | `PdfVisualViewer.tsx` | In-browser PDF rendering component using `react-pdf` and `pdfjs-dist`. Handles page navigation, zoom, and client-side text extraction for AI processing. |
@@ -185,7 +192,7 @@ The root application directory using Next.js 16 App Router conventions.
 
 #### UI Primitives (`components/ui/`)
 
-shadcn/ui components built on Radix UI primitives and styled with Tailwind CSS. Includes `button`, `card`, `dialog`, `input`, `label`, `select`, `table`, and other accessible primitives.
+shadcn/ui components built on [Base UI](https://base-ui.com/) primitives and styled with Tailwind CSS. Includes `button` and `tooltip` accessible primitives.
 
 ### `lib/` — Core Logic & Utilities
 
@@ -193,7 +200,7 @@ shadcn/ui components built on Radix UI primitives and styled with Tailwind CSS. 
 |--------|----------------|
 | `api-client.ts` | Typed wrapper around Supabase client. Provides reusable methods for common queries (fetch documents, get nodes, etc.). |
 | `crud.ts` | Generic CRUD helper functions for Supabase tables. Abstracts common create/read/update/delete patterns. |
-| `force-layout.ts` | Force-directed graph layout algorithm for positioning concept nodes in the methodology graph. |
+| `force-layout.ts` | Deterministic layered (Sugiyama-style) layout engine for the methodology graph. Produces grid-aligned, crossing-minimized, compact arrangements and honors pinned (manually placed) node positions. |
 | `pdfWorker.ts` | Client-side PDF text extraction using `pdfjs-dist`. Runs in a Web Worker to avoid blocking the main thread during document processing. |
 | `supabase.ts` | Browser-side Supabase client initialization using `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. |
 | `utils.ts` | Utility functions including `cn()` for Tailwind class merging (uses `clsx` + `tailwind-merge`) and `isArabicText()` for Arabic language detection via Unicode heuristic. |
