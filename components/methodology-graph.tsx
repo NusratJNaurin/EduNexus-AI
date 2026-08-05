@@ -10,6 +10,7 @@ import {
   Layers,
   Sparkles,
   Highlighter,
+  LayoutGrid,
   Send,
   Loader2,
   X,
@@ -263,6 +264,14 @@ export function MethodologyGraph() {
 
   const [conceptEdges, setConceptEdges] = useState<ConceptEdgeRow[]>([])
 
+  // ── Manual drag + layout lock state ─────────────────────────────────────────
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [autoLayouting, setAutoLayouting] = useState(false)
+  const dragRef = useRef<{ id: string; pointerId: number; offsetX: number; offsetY: number } | null>(null)
+  // Client-side lock map: remembers positions (dragged or auto-laid-out) so
+  // refetches always feed them back into the layout engine as pinned nodes.
+  const lockMapRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+
   // Track actual canvas dimensions via ResizeObserver
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 })
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -308,17 +317,21 @@ export function MethodologyGraph() {
       const { width: containerWidth, height: containerHeight } = canvasSize
       console.log("[Debug] canvas dimensions:", containerWidth, containerHeight)
 
-      // Build force layout input nodes from DB records
-      const forceInput: ForceNodeInput[] = userRecords.map((item) => ({
-        id: item.id,
-        node_type: item.node_type,
-        x: item.position_x || undefined,
-        y: item.position_y || undefined,
-      }))
+      // Build force layout input nodes from DB records, merging any
+      // client-side locked positions (dragged this session) on top.
+      const forceInput: ForceNodeInput[] = userRecords.map((item) => {
+        const locked = lockMapRef.current.get(item.id)
+        return {
+          id: item.id,
+          node_type: item.node_type,
+          x: locked?.x ?? (item.position_x || undefined),
+          y: locked?.y ?? (item.position_y || undefined),
+        }
+      })
 
       console.log("[Debug] forceInput nodes:", forceInput.map((n) => ({ id: n.id, type: n.node_type, x: n.x, y: n.y })))
 
-      // Compute positions using d3-force
+      // Compute positions using the deterministic layered layout engine
       const positions = computeForceLayout(forceInput, userEdges, containerWidth, containerHeight)
 
       console.log("[Debug] computed positions:", Array.from(positions.entries()).map(([id, pos]) => ({ id, x: pos.x, y: pos.y })))
@@ -349,6 +362,102 @@ export function MethodologyGraph() {
       console.error("Failed to compile methodology nodes:", err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ── Node drag gestures ──────────────────────────────────────────────────────
+  const handleNodePointerDown = (e: React.PointerEvent<HTMLButtonElement>, node: GraphNode) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    dragRef.current = {
+      id: node.id,
+      pointerId: e.pointerId,
+      offsetX: node.x - (e.clientX - rect.left),
+      offsetY: node.y - (e.clientY - rect.top),
+    }
+    setDraggingId(node.id)
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* pointer may already be inactive */
+    }
+  }
+
+  const handleNodePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag || e.pointerId !== drag.pointerId) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+
+    const rawX = e.clientX - rect.left + drag.offsetX
+    const rawY = e.clientY - rect.top + drag.offsetY
+    const x = Math.max(65, Math.min(rect.width - 65, rawX))
+    const y = Math.max(55, Math.min(rect.height - 55, rawY))
+
+    lockMapRef.current.set(drag.id, { x, y })
+    setNodes((prev) =>
+      prev.map((n) => (n.id === drag.id ? { ...n, x, y } : n)),
+    )
+  }
+
+  const endNodeDrag = (e: React.PointerEvent<HTMLButtonElement>, persist: boolean) => {
+    const drag = dragRef.current
+    if (!drag || e.pointerId !== drag.pointerId) return
+    dragRef.current = null
+    setDraggingId(null)
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      /* capture may already be released */
+    }
+    if (!persist) return
+    const locked = lockMapRef.current.get(drag.id)
+    if (!locked) return
+    // Persist the locked position so the layout engine treats it as pinned
+    // on every future fetch and never snaps it back.
+    void conceptNodesCrud
+      .updateById(drag.id, { position_x: locked.x, position_y: locked.y })
+      .catch((err) => console.error("Failed to save node position:", err))
+  }
+
+  // ── Auto-Layout button: fresh, deterministic, beautiful arrangement ─────────
+  const handleAutoLayout = async () => {
+    if (nodes.length === 0 || autoLayouting) return
+    setAutoLayouting(true)
+    try {
+      const { width: canvasWidth, height: canvasHeight } = canvasSize
+      const positions = computeForceLayout(
+        nodes.map((n) => ({ id: n.id, node_type: n.node_type })),
+        conceptEdges,
+        canvasWidth,
+        canvasHeight,
+        true, // ignoreSaved → re-layout every node, including previously pinned ones
+      )
+      if (positions.size === 0) return
+
+      setNodes((prev) =>
+        prev.map((n) => {
+          const pos = positions.get(n.id)
+          return pos ? { ...n, x: pos.x, y: pos.y } : n
+        }),
+      )
+      positions.forEach((pos, id) => lockMapRef.current.set(id, pos))
+
+      await Promise.all(
+        Array.from(positions.entries()).map(([id, pos]) =>
+          conceptNodesCrud
+            .updateById(id, { position_x: pos.x, position_y: pos.y })
+            .catch((err) => console.error("Failed to persist auto-layout position:", err)),
+        ),
+      )
+    } catch (err) {
+      console.error("Auto-layout engine failed:", err)
+    } finally {
+      setAutoLayouting(false)
     }
   }
 
@@ -559,6 +668,21 @@ export function MethodologyGraph() {
                 <Legend color="bg-slate-700" label="Paper Structure" />
                 <Legend color="bg-blue-500" label="Core Prerequisite" />
                 <Legend color="border-2 border-dashed border-red-500 bg-card" label="Identified Gap" />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading || autoLayouting || nodes.length === 0}
+                  onClick={() => void handleAutoLayout()}
+                  className="h-7 gap-1.5 px-2.5 text-[11px] font-medium"
+                >
+                  {autoLayouting ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <LayoutGrid className="size-3" />
+                  )}
+                  {autoLayouting ? "Laying out..." : "Auto Layout"}
+                </Button>
               </div>
             </div>
 
@@ -626,12 +750,20 @@ export function MethodologyGraph() {
                           key={node.id}
                           type="button"
                           onClick={() => setSelectedNode(node)}
-                          className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform active:scale-95 pointer-events-auto"
+                          onPointerDown={(e) => handleNodePointerDown(e, node)}
+                          onPointerMove={handleNodePointerMove}
+                          onPointerUp={(e) => endNodeDrag(e, true)}
+                          onPointerCancel={(e) => endNodeDrag(e, false)}
+                          className={`absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none transition-transform pointer-events-auto touch-none select-none ${
+                            draggingId === node.id
+                              ? "cursor-grabbing scale-105"
+                              : "cursor-grab hover:scale-105 active:scale-95"
+                          }`}
                           style={{ left: `${node.x}px`, top: `${node.y}px` }}
                         >
                           <div
                             className={`flex max-w-[180px] items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium shadow-md border transition-all ${
-                              isSelected
+                              isSelected || draggingId === node.id
                                 ? "ring-4 ring-indigo-500 scale-105"
                                 : "hover:scale-105"
                             } ${
