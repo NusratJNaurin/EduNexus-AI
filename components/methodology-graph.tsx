@@ -38,6 +38,45 @@ interface GraphNode {
 
 type ForceNodeInput = { id: string; node_type: ConceptNodeType; x?: number; y?: number }
 
+// Approximate rendered node box dimensions (matches the pill node styling)
+const NODE_BOX_W = 150
+const NODE_BOX_H = 40
+
+/**
+ * Computes the points where a line from source→target crosses the edges of
+ * both node boxes, so arrows point at the node boundary instead of being
+ * hidden underneath the node. Returns the visible line segment endpoints.
+ */
+function getEdgePoints(
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+): { x1: number; y1: number; x2: number; y2: number } {
+  const dx = target.x - source.x
+  const dy = target.y - source.y
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+
+  // Distance from center to box edge along the direction vector
+  const halfW = NODE_BOX_W / 2
+  const halfH = NODE_BOX_H / 2
+  const tSource = Math.min(
+    Math.abs(ux) > 1e-6 ? halfW / Math.abs(ux) : Infinity,
+    Math.abs(uy) > 1e-6 ? halfH / Math.abs(uy) : Infinity,
+  )
+  const tTarget = Math.min(
+    Math.abs(ux) > 1e-6 ? halfW / Math.abs(ux) : Infinity,
+    Math.abs(uy) > 1e-6 ? halfH / Math.abs(uy) : Infinity,
+  )
+
+  return {
+    x1: source.x + ux * tSource,
+    y1: source.y + uy * tSource,
+    x2: target.x - ux * tTarget,
+    y2: target.y - uy * tTarget,
+  }
+}
+
 // ── Illustrated empty state: researcher building a concept map ────────────────
 function GraphEmptyState() {
   return (
@@ -700,10 +739,10 @@ export function MethodologyGraph() {
                 <>
                   <svg className="absolute inset-0 h-full w-full pointer-events-none z-0" aria-hidden="true">
                     <defs>
-                      <marker id="arrow-prerequisite" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <marker id="arrow-prerequisite" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
                       </marker>
-                      <marker id="arrow-gap" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <marker id="arrow-gap" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
                       </marker>
                     </defs>
@@ -715,14 +754,15 @@ export function MethodologyGraph() {
                       if (!sourceNode || !targetNode) return null
 
                       const isPrereq = edge.relationship_type === "prerequisite"
+                      const points = getEdgePoints(sourceNode, targetNode)
 
                       return (
                         <g key={edge.id}>
                           <line
-                            x1={sourceNode.x}
-                            y1={sourceNode.y}
-                            x2={targetNode.x}
-                            y2={targetNode.y}
+                            x1={points.x1}
+                            y1={points.y1}
+                            x2={points.x2}
+                            y2={points.y2}
                             stroke={isPrereq ? "#3b82f6" : "#ef4444"}
                             strokeWidth={isPrereq ? 2.5 : 2}
                             strokeDasharray={isPrereq ? undefined : "5 5"}
@@ -730,8 +770,8 @@ export function MethodologyGraph() {
                             className="opacity-75"
                           />
                           <circle 
-                            cx={(sourceNode.x + targetNode.x) / 2} 
-                            cy={(sourceNode.y + targetNode.y) / 2} 
+                            cx={(points.x1 + points.x2) / 2} 
+                            cy={(points.y1 + points.y2) / 2} 
                             r="5" 
                             className="fill-white stroke-slate-400"
                           />
