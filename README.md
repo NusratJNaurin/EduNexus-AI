@@ -3,6 +3,7 @@
 > An intelligent, collaborative academic workspace and research sandbox that turns dense research papers into navigable, conversational, and measurable knowledge.
 
 **EduNexus AI** is a collaborative research platform designed for Qatar University's academic community — students, researchers, and faculty — to transform dense academic papers into an interactive knowledge space.
+### 🎯 The Vision
 Understanding complex material becomes easier when you can visualize how ideas relate to one another. With that in mind, we built a workspace where users can upload research documents, automatically map prerequisite relationships between concepts, generate concise AI summaries, and identify open research gaps. A document-grounded AI assistant answers questions using only the uploaded content, and can even explain how different papers connect to each other. The platform natively supports Arabic PDFs — summaries and chat responses automatically switch language based on the document or the user's query. Beyond exploration, EduNexus AI helps students sharpen their critical thinking through the **Socratic Viva Pod**, an oral-defense simulator that records responses and evaluates them against structured rubrics. For instructors, the **Teacher Evaluation Portal** provides visibility into each student's reading activity and engagement, with exportable reports for data-driven assessment.
 
 ---
@@ -13,21 +14,44 @@ Understanding complex material becomes easier when you can visualize how ideas r
 
 ---
 
-## Screenshot
+## Interface Preview
 
-<img width="2834" height="1454" alt="Screenshot 2026-06-20 163009" src="https://github.com/user-attachments/assets/00bd4055-0805-44df-b62f-8305de17c204" />
+### 🏫 Enrolled Sections Dashboard
+Overview of active course enrollments, instructor details, assigned classwork, and section-specific invite codes.
 
+<img width="100%" alt="Screenshot 2026-08-06 151313" src="https://github.com/user-attachments/assets/f01855f9-05a4-4aae-866a-d37aa038c4c8" />
+
+
+
+### 📄 Document Interaction Studio
+Real-time academic paper viewer paired with single-file metric matrices (readability, complexity, statistical confidence) and concise AI summaries.
+
+<img width="2878" height="1458" alt="Screenshot 2026-08-06 164804" src="https://github.com/user-attachments/assets/5634d94a-010e-4c1d-8cdd-c31e493e014c" />
+
+
+
+### 🕸️ Relational Methodology Graph Canvas
+Interactive knowledge mapping engine that visualizes connections, prerequisites, and structural gaps across uploaded research papers.
+
+<img width="2880" height="1464" alt="Screenshot 2026-08-06 164825" src="https://github.com/user-attachments/assets/f99e32cd-e945-4a94-8553-8c90bb458c91" />
+
+
+
+### 📊 Teacher Evaluation & Cohort Analytics
+Instructor-facing management portal providing live student reading times, engagement metrics, and automated section invitation code generation.
+
+<img width="2880" height="1464" alt="Screenshot 2026-08-06 165015 (1)" src="https://github.com/user-attachments/assets/9ae38c16-e9e4-4431-9684-69a7033261cf" />
 
 ---
 
 ## Core Features
 
 - **Visual Methodology Mapping** — Upload research PDFs and render them as interactive relational graphs. Concept nodes represent papers, prerequisites, and research gaps, with draggable canvas positioning, a one-click **Auto-Layout** control, and edge relationships stored in Supabase. Manually placed nodes lock in place so the layout engine never snaps them back.
-- **Source-Grounded Chat** — An interactive Q&A assistant anchored to the active document. Queries are sent to a Gemini-powered `/api/chat` route with strict system instructions to confine answers to the uploaded text and reduce AI hallucinations. Supports Arabic: if the user asks in Arabic, Gemini responds in Arabic; for short ambiguous queries, the document language is used as a fallback.
-- **AI Document Summarization** — On upload, extracted text is summarized via `/api/summarize` to produce a concise 1–2 sentence overview of the paper's core topic and structural pillars. Automatically detects Arabic documents and generates summaries in Arabic.
-- **Arabic PDF Support** — Uploaded Arabic-language PDFs are fully supported. Text extraction, AI summarization, and source-grounded chat all detect Arabic content via a Unicode heuristic and respond in the appropriate language. Chat bubbles with Arabic text are right-aligned for correct RTL rendering.
 - **Automated Dependency Inference** — On upload, the platform automatically analyzes a new document against existing documents to infer prerequisite, research-gap, and citation relationships via `/api/analyze-dependencies` and `/api/infer-dependencies`, populating the methodology graph with structured edges.
 - **Socratic Viva Pod (Student)** — Record oral-defense responses against selected concept nodes. Audio is transcribed and evaluated by Gemini via `/api/viva`, with feedback logs persisted per node.
+- **Arabic PDF Support** — Uploaded Arabic-language PDFs are fully supported. Text extraction, AI summarization, and source-grounded chat all detect Arabic content via a Unicode heuristic and respond in the appropriate language. Chat bubbles with Arabic text are right-aligned for correct RTL rendering.
+- **Source-Grounded Chat** — An interactive Q&A assistant anchored to the active document. Queries are sent to a Gemini-powered `/api/chat` route with strict system instructions to confine answers to the uploaded text and reduce AI hallucinations. Supports Arabic: if the user asks in Arabic, Gemini responds in Arabic; for short ambiguous queries, the document language is used as a fallback.
+- **AI Document Summarization** — On upload, extracted text is summarized via `/api/summarize` to produce a concise 1–2 sentence overview of the paper's core topic and structural pillars. Automatically detects Arabic documents and generates summaries in Arabic.
 - **Teacher Evaluation Portal (Faculty)** — Invite-only class sections, engagement timelines, completion metrics, student roster tracking, and export controls for CSV performance matrices and JSON audit trails.
 
 ---
